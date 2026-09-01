@@ -19,7 +19,20 @@ export {
 
 import * as THREE from 'three';
 import { getCleanPBR, buildEmergentTree } from './CleanBotanicalModels';
-export { buildEmergentTree };
+import {
+  generateEmergentHardwood,
+  generateCocoaTree,
+  generateFruitTree,
+  generatePawpaw,
+} from './ProceduralTreeEngine';
+
+export {
+  buildEmergentTree,
+  generateEmergentHardwood,
+  generateCocoaTree,
+  generateFruitTree,
+  generatePawpaw,
+};
 
 // Helper: Random in Circle
 function randInCircle(radius: number): [number, number] {

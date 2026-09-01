@@ -87,7 +87,10 @@ export class FarmBuilder {
     const hasOilPalm = cropIds.includes('oil-palm');
     const hasCocoa = cropIds.includes('cocoa');
     const hasPlantain = cropIds.includes('plantain');
-    const hasTree = cropIds.some(c => ['mango', 'cashew', 'kola-nut', 'pawpaw'].includes(c));
+    const hasMango = cropIds.includes('mango');
+    const hasCashew = cropIds.includes('cashew');
+    const hasKola = cropIds.includes('kola-nut');
+    const hasPawpaw = cropIds.includes('pawpaw');
     const hasMaize = cropIds.includes('maize');
     const hasYam = cropIds.some(c => c.includes('yam'));
     const hasCassava = cropIds.includes('cassava');
@@ -107,7 +110,19 @@ export class FarmBuilder {
     if (hasCocoa) {
       [[0, 0], [-1.8, -0.6], [1.8, 0.6], [-0.6, 1.8]].forEach(([x, z]) => shrub.add(buildCocoa(x, z)));
     }
-    if (hasTree && !hasOilPalm && !hasPlantain) {
+    if (hasMango) {
+      [[-2.6, 1.8], [2.6, -1.8]].forEach(([x, z]) => canopy.add(buildTree(x, z, 0x3a2012, 0x15803d, 5.2)));
+    }
+    if (hasCashew) {
+      [[1.8, 2.4], [-1.8, -2.4]].forEach(([x, z]) => canopy.add(buildTree(x, z, 0x451a03, 0x16a34a, 4.8)));
+    }
+    if (hasKola) {
+      [[-3.2, 0], [3.2, 0]].forEach(([x, z]) => canopy.add(buildTree(x, z, 0x2e180c, 0x14532d, 5.8)));
+    }
+    if (hasPawpaw) {
+      [[-1.2, 2.8], [1.2, 2.8], [0, -2.6]].forEach(([x, z]) => shrub.add(buildShrub(x, z, 0x65a30d, 3.2, 0xeab308)));
+    }
+    if (!hasOilPalm && !hasPlantain && !hasCocoa && !hasMango && !hasCashew && !hasKola && !hasPawpaw && cropIds.some(c => ['mango', 'cashew', 'kola-nut', 'pawpaw'].includes(c))) {
       [[-2.5, 1.5], [2.5, -1.5]].forEach(([x, z]) => canopy.add(buildTree(x, z)));
     }
 
