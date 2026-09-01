@@ -220,6 +220,7 @@ export class FarmScene {
 
   setSeason(season: Season) {
     this.farmRenderer.setSeason(season);
+    this.farmBuilder.setSeason(season);
   }
 
   setTimeOfDay(hour: number) {
@@ -229,7 +230,7 @@ export class FarmScene {
   setTheme(theme: 'light' | 'dark') {
     this.farmRenderer.setTheme(theme);
     const fogColor = theme === 'dark' ? 0x060c08 : 0xf4eee2;
-    this.scene.fog = new THREE.FogExp2(fogColor, 0.015);
+    this.scene.fog = new THREE.FogExp2(fogColor, 0.012);
   }
 
   setLayerVisible(layer: string, visible: boolean) {
@@ -252,6 +253,7 @@ export class FarmScene {
 
       this.particleCycles.update(delta);
       this.boidsSimulation.update(delta);
+      this.farmBuilder.updateGrass(this.elapsedTime, this.farmRenderer.getSunPosition());
       updateWindUniforms(this.scene, this.elapsedTime);
 
       // Living wind sway on vegetation & fauna animation

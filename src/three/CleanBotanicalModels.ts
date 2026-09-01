@@ -1,8 +1,9 @@
 /**
  * Farm Atlas — CleanBotanicalModels
- * High-fidelity, organic 3D botanical & faunal specimens
+ * High-fidelity, organic 3D botanical & faunal specimens inspired by
+ * Codrops "Fractals to Forests" procedural branching and botanical anatomy.
  * Powered by high-resolution PBR textures, organic leaf venation cards,
- * furrowed bark bump maps, warty pod rinds, and feathered plumage.
+ * furrowed bark bump maps, flared buttress roots, warty pod rinds, and feathered plumage.
  */
 
 import * as THREE from 'three';
@@ -10,13 +11,9 @@ import {
   getLeafTexture,
   getBarkTexture,
   getCocoaPodTexture,
-  getFeatherTexture,
-  getGoatFurTexture,
 } from './TextureGenerator';
 
 // ─── PBR Material Cache ──────────────────────────────────────────────────────
-const PBR_CACHE = new Map<string, THREE.MeshPhysicalMaterial>();
-
 export function getCleanPBR(options: {
   color?: number;
   map?: THREE.Texture;
@@ -62,18 +59,134 @@ export function getCleanPBR(options: {
   return new THREE.MeshPhysicalMaterial(matOptions);
 }
 
-// ─── 1. REALISTIC COCOA TREE (Theobroma cacao) ───────────────────────────────
+// ─── 1. FRACTAL EMERGENT RAINFOREST TREE (Iroko / Mahogany) ──────────────────
+export function buildEmergentTree(x = 0, z = 0, height = 7.5): THREE.Group {
+  const group = new THREE.Group();
+  group.position.set(x, 0, z);
+  group.userData.swayable = true;
+  group.userData.swayPhase = Math.random() * Math.PI * 2;
+
+  const barkTex = getBarkTexture(0x2e180c, 'hardwood');
+  const trunkMat = getCleanPBR({
+    map: barkTex.map,
+    bumpMap: barkTex.bumpMap,
+    bumpScale: 0.12,
+    roughnessMap: barkTex.roughnessMap,
+    roughness: 0.85,
+    clearcoat: 0.1,
+  });
+
+  // Flared Buttress Roots at base
+  for (let r = 0; r < 5; r++) {
+    const rootAngle = (r / 5) * Math.PI * 2 + Math.random() * 0.3;
+    const rootCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(Math.cos(rootAngle) * 0.25, 1.2, Math.sin(rootAngle) * 0.25),
+      new THREE.Vector3(Math.cos(rootAngle) * 0.65, 0.4, Math.sin(rootAngle) * 0.65),
+      new THREE.Vector3(Math.cos(rootAngle) * 1.15, 0.02, Math.sin(rootAngle) * 1.15),
+    ]);
+    const rootGeo = new THREE.TubeGeometry(rootCurve, 12, 0.08, 10, false);
+    rootGeo.computeVertexNormals();
+    const rootMesh = new THREE.Mesh(rootGeo, trunkMat);
+    rootMesh.castShadow = true;
+    rootMesh.receiveShadow = true;
+    group.add(rootMesh);
+  }
+
+  // Tapering Main Trunk with Natural Catmull-Rom Sway
+  const trunkCurve = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(0, 0, 0),
+    new THREE.Vector3(0.08, height * 0.3, 0.04),
+    new THREE.Vector3(-0.06, height * 0.6, -0.05),
+    new THREE.Vector3(0.04, height * 0.85, 0.02),
+  ]);
+  const trunkGeo = new THREE.TubeGeometry(trunkCurve, 28, 0.28, 16, false);
+  trunkGeo.computeVertexNormals();
+  const trunkMesh = new THREE.Mesh(trunkGeo, trunkMat);
+  trunkMesh.castShadow = true;
+  trunkMesh.receiveShadow = true;
+  group.add(trunkMesh);
+
+  // Fractal Branch Bifurcation
+  const leafTex = getLeafTexture('broad');
+  const leafMat = getCleanPBR({
+    map: leafTex.map,
+    alphaMap: leafTex.alphaMap,
+    bumpMap: leafTex.bumpMap,
+    bumpScale: 0.06,
+    roughnessMap: leafTex.roughnessMap,
+    transparent: true,
+    alphaTest: 0.35,
+    roughness: 0.35,
+    clearcoat: 0.45,
+    clearcoatRoughness: 0.15,
+  });
+
+  const boughs = [
+    { startY: height * 0.7, angle: 0.2, length: 2.8, tilt: 0.55 },
+    { startY: height * 0.78, angle: 2.3, length: 2.5, tilt: 0.6 },
+    { startY: height * 0.85, angle: 4.4, length: 2.6, tilt: 0.5 },
+  ];
+
+  boughs.forEach((bc) => {
+    const bx = Math.cos(bc.angle) * bc.length;
+    const bz = Math.sin(bc.angle) * bc.length;
+    const bCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(0, bc.startY, 0),
+      new THREE.Vector3(bx * 0.5, bc.startY + 0.4, bz * 0.5),
+      new THREE.Vector3(bx, bc.startY + 0.8, bz),
+    ]);
+    const bGeo = new THREE.TubeGeometry(bCurve, 16, 0.12, 12, false);
+    bGeo.computeVertexNormals();
+    const bMesh = new THREE.Mesh(bGeo, trunkMat);
+    bMesh.castShadow = true;
+    group.add(bMesh);
+
+    // Sub-twigs branching off primary bough
+    for (let t = 0; t < 3; t++) {
+      const subAngle = bc.angle + (t - 1) * 0.6;
+      const subLen = 1.4;
+      const sx = bx + Math.cos(subAngle) * subLen;
+      const sz = bz + Math.sin(subAngle) * subLen;
+      const sCurve = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(bx, bc.startY + 0.8, bz),
+        new THREE.Vector3(sx * 0.8, bc.startY + 1.2, sz * 0.8),
+        new THREE.Vector3(sx, bc.startY + 1.4, sz),
+      ]);
+      const sGeo = new THREE.TubeGeometry(sCurve, 10, 0.05, 8, false);
+      sGeo.computeVertexNormals();
+      const sMesh = new THREE.Mesh(sGeo, trunkMat);
+      sMesh.castShadow = true;
+      group.add(sMesh);
+
+      // Layered Foliage Clusters on Twigs
+      for (let l = 0; l < 6; l++) {
+        const leafCard = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.9), leafMat);
+        const lx = sx + (Math.random() - 0.5) * 0.8;
+        const ly = bc.startY + 1.3 + (Math.random() - 0.5) * 0.6;
+        const lz = sz + (Math.random() - 0.5) * 0.8;
+        leafCard.position.set(lx, ly, lz);
+        leafCard.rotation.set(Math.random() * 0.6, Math.random() * Math.PI * 2, Math.random() * 0.6);
+        leafCard.castShadow = true;
+        group.add(leafCard);
+      }
+    }
+  });
+
+  return group;
+}
+
+// ─── 2. REALISTIC COCOA TREE (Theobroma cacao) ───────────────────────────────
 export function buildCleanCocoa(x = 0, z = 0): THREE.Group {
   const group = new THREE.Group();
   group.position.set(x, 0, z);
   group.userData.swayable = true;
   group.userData.swayPhase = Math.random() * Math.PI * 2;
 
-  const barkTex = getBarkTexture(0x3d2314);
+  const barkTex = getBarkTexture(0x3d2314, 'cacao');
   const trunkMat = getCleanPBR({
     map: barkTex.map,
     bumpMap: barkTex.bumpMap,
-    bumpScale: 0.08,
+    bumpScale: 0.1,
     roughnessMap: barkTex.roughnessMap,
     roughness: 0.85,
     clearcoat: 0.1,
@@ -82,11 +195,11 @@ export function buildCleanCocoa(x = 0, z = 0): THREE.Group {
   // Gnarled Organic Trunk
   const trunkCurve = new THREE.CatmullRomCurve3([
     new THREE.Vector3(0, 0, 0),
-    new THREE.Vector3(0.05, 0.7, 0.02),
-    new THREE.Vector3(-0.04, 1.4, -0.03),
-    new THREE.Vector3(0.02, 2.1, 0.01),
+    new THREE.Vector3(0.06, 0.7, 0.02),
+    new THREE.Vector3(-0.05, 1.4, -0.04),
+    new THREE.Vector3(0.03, 2.2, 0.01),
   ]);
-  const trunkGeo = new THREE.TubeGeometry(trunkCurve, 24, 0.12, 16, false);
+  const trunkGeo = new THREE.TubeGeometry(trunkCurve, 24, 0.13, 16, false);
   trunkGeo.computeVertexNormals();
   const trunkMesh = new THREE.Mesh(trunkGeo, trunkMat);
   trunkMesh.castShadow = true;
@@ -95,10 +208,10 @@ export function buildCleanCocoa(x = 0, z = 0): THREE.Group {
 
   // Branching boughs
   const branchConfigs = [
-    { startY: 1.5, angle: 0.3, length: 1.5, tilt: 0.6 },
-    { startY: 1.7, angle: 1.9, length: 1.4, tilt: 0.65 },
-    { startY: 1.9, angle: 3.5, length: 1.6, tilt: 0.55 },
-    { startY: 2.1, angle: 5.0, length: 1.3, tilt: 0.7 },
+    { startY: 1.5, angle: 0.3, length: 1.6, tilt: 0.6 },
+    { startY: 1.7, angle: 1.9, length: 1.5, tilt: 0.65 },
+    { startY: 1.9, angle: 3.5, length: 1.7, tilt: 0.55 },
+    { startY: 2.1, angle: 5.0, length: 1.4, tilt: 0.7 },
   ];
 
   const leafTex = getLeafTexture('broad');
@@ -106,9 +219,10 @@ export function buildCleanCocoa(x = 0, z = 0): THREE.Group {
     map: leafTex.map,
     alphaMap: leafTex.alphaMap,
     bumpMap: leafTex.bumpMap,
-    bumpScale: 0.04,
+    bumpScale: 0.05,
+    roughnessMap: leafTex.roughnessMap,
     transparent: true,
-    alphaTest: 0.4,
+    alphaTest: 0.35,
     roughness: 0.35,
     clearcoat: 0.45,
     clearcoatRoughness: 0.15,
@@ -122,36 +236,36 @@ export function buildCleanCocoa(x = 0, z = 0): THREE.Group {
       new THREE.Vector3(bx * 0.6, bc.startY + 0.3, bz * 0.6),
       new THREE.Vector3(bx, bc.startY + 0.5, bz),
     ]);
-    const bGeo = new THREE.TubeGeometry(bCurve, 14, 0.055, 12, false);
+    const bGeo = new THREE.TubeGeometry(bCurve, 14, 0.065, 12, false);
     bGeo.computeVertexNormals();
     const bMesh = new THREE.Mesh(bGeo, trunkMat);
     bMesh.castShadow = true;
     group.add(bMesh);
 
-    // Realistic Botanical Leaf Cards along branch
-    for (let l = 0; l < 8; l++) {
-      const leafCard = new THREE.Mesh(new THREE.PlaneGeometry(0.55, 0.8), leafMat);
-      const lx = bx * (0.4 + (l / 8) * 0.8) + (Math.random() - 0.5) * 0.35;
-      const ly = bc.startY + 0.4 + (l / 8) * 0.6 + (Math.random() - 0.5) * 0.2;
-      const lz = bz * (0.4 + (l / 8) * 0.8) + (Math.random() - 0.5) * 0.35;
+    // Botanical Leaf Cards along branch
+    for (let l = 0; l < 9; l++) {
+      const leafCard = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 0.85), leafMat);
+      const lx = bx * (0.4 + (l / 9) * 0.8) + (Math.random() - 0.5) * 0.35;
+      const ly = bc.startY + 0.4 + (l / 9) * 0.6 + (Math.random() - 0.5) * 0.2;
+      const lz = bz * (0.4 + (l / 9) * 0.8) + (Math.random() - 0.5) * 0.35;
       leafCard.position.set(lx, ly, lz);
-      leafCard.rotation.set(Math.random() * 0.8, Math.random() * Math.PI, Math.random() * 0.8);
+      leafCard.rotation.set(Math.random() * 0.8, Math.random() * Math.PI * 2, Math.random() * 0.8);
       leafCard.castShadow = true;
       group.add(leafCard);
     }
   });
 
-  // Textured Fluted Cocoa Pods on Trunk
+  // Cauliflorous Cocoa Pods on Trunk
   const podColors = [0xf59e0b, 0xea580c, 0x16a34a, 0xb91c1c];
-  for (let p = 0; p < 5; p++) {
-    const angle = (p / 5) * Math.PI * 2 + 0.4;
-    const podY = 0.6 + p * 0.34;
+  for (let p = 0; p < 6; p++) {
+    const angle = (p / 6) * Math.PI * 2 + 0.4;
+    const podY = 0.5 + p * 0.32;
     const color = podColors[p % podColors.length];
     const podTex = getCocoaPodTexture(color);
 
     const podGroup = new THREE.Group();
-    podGroup.position.set(Math.cos(angle) * 0.14, podY, Math.sin(angle) * 0.14);
-    podGroup.rotation.set(0.3, angle, 0.2);
+    podGroup.position.set(Math.cos(angle) * 0.15, podY, Math.sin(angle) * 0.15);
+    podGroup.rotation.set(0.35, angle, 0.2);
 
     const stalk = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.06, 8), trunkMat);
     stalk.position.set(0, 0.12, 0);
@@ -178,25 +292,25 @@ export function buildCleanCocoa(x = 0, z = 0): THREE.Group {
   return group;
 }
 
-// ─── 2. REALISTIC OIL PALM (Elaeis guineensis) ───────────────────────────────
+// ─── 3. REALISTIC OIL PALM (Elaeis guineensis) ───────────────────────────────
 export function buildCleanOilPalm(x = 0, z = 0): THREE.Group {
   const group = new THREE.Group();
   group.position.set(x, 0, z);
   group.userData.swayable = true;
   group.userData.swayPhase = Math.random() * Math.PI * 2;
 
-  const trunkH = 5.8 + Math.random() * 1.2;
+  const trunkH = 6.0 + Math.random() * 1.0;
 
-  const barkTex = getBarkTexture(0x452310);
+  const barkTex = getBarkTexture(0x452310, 'palm');
   const trunkMat = getCleanPBR({
     map: barkTex.map,
     bumpMap: barkTex.bumpMap,
-    bumpScale: 0.12,
+    bumpScale: 0.14,
     roughness: 0.9,
     clearcoat: 0.05,
   });
 
-  const trunkGeo = new THREE.CylinderGeometry(0.22, 0.34, trunkH, 24, 16);
+  const trunkGeo = new THREE.CylinderGeometry(0.24, 0.36, trunkH, 24, 16);
   trunkGeo.computeVertexNormals();
   const trunk = new THREE.Mesh(trunkGeo, trunkMat);
   trunk.position.y = trunkH / 2;
@@ -211,13 +325,14 @@ export function buildCleanOilPalm(x = 0, z = 0): THREE.Group {
     alphaMap: palmLeafTex.alphaMap,
     bumpMap: palmLeafTex.bumpMap,
     bumpScale: 0.06,
+    roughnessMap: palmLeafTex.roughnessMap,
     transparent: true,
     alphaTest: 0.35,
     roughness: 0.35,
-    clearcoat: 0.4,
+    clearcoat: 0.45,
   });
 
-  const frondCount = 20;
+  const frondCount = 22;
   for (let f = 0; f < frondCount; f++) {
     const angle = (f / frondCount) * Math.PI * 2;
     const frondGroup = new THREE.Group();
@@ -226,11 +341,11 @@ export function buildCleanOilPalm(x = 0, z = 0): THREE.Group {
 
     const rachisCurve = new THREE.CatmullRomCurve3([
       new THREE.Vector3(0, 0, 0),
-      new THREE.Vector3(1.2, 0.65, 0),
-      new THREE.Vector3(2.6, 0.4, 0),
-      new THREE.Vector3(3.8, -0.65, 0),
+      new THREE.Vector3(1.3, 0.7, 0),
+      new THREE.Vector3(2.8, 0.45, 0),
+      new THREE.Vector3(4.0, -0.7, 0),
     ]);
-    const rachisGeo = new THREE.TubeGeometry(rachisCurve, 20, 0.035, 8, false);
+    const rachisGeo = new THREE.TubeGeometry(rachisCurve, 20, 0.038, 8, false);
     rachisGeo.computeVertexNormals();
     const rachis = new THREE.Mesh(rachisGeo, trunkMat);
     rachis.castShadow = true;
@@ -240,9 +355,9 @@ export function buildCleanOilPalm(x = 0, z = 0): THREE.Group {
       const t = p / 18;
       const pt = rachisCurve.getPoint(t);
       for (const side of [-1, 1]) {
-        const leaflet = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.85), frondMat);
-        leaflet.position.set(pt.x, pt.y - 0.08, pt.z + side * 0.26);
-        leaflet.rotation.set(side * 0.45, 0, -0.42);
+        const leaflet = new THREE.Mesh(new THREE.PlaneGeometry(0.32, 0.9), frondMat);
+        leaflet.position.set(pt.x, pt.y - 0.08, pt.z + side * 0.28);
+        leaflet.rotation.set(side * 0.48, 0, -0.42);
         leaflet.castShadow = true;
         frondGroup.add(leaflet);
       }
@@ -252,7 +367,7 @@ export function buildCleanOilPalm(x = 0, z = 0): THREE.Group {
   }
 
   // Lustrous Orange-Red Palm Kernel Fruit Bunch
-  const bunchGeo = new THREE.SphereGeometry(0.44, 20, 16);
+  const bunchGeo = new THREE.SphereGeometry(0.46, 20, 16);
   bunchGeo.scale(1, 0.85, 1);
   bunchGeo.computeVertexNormals();
   const bunchMat = getCleanPBR({
@@ -264,23 +379,23 @@ export function buildCleanOilPalm(x = 0, z = 0): THREE.Group {
     emissiveIntensity: 0.2,
   });
   const bunch = new THREE.Mesh(bunchGeo, bunchMat);
-  bunch.position.set(0.22, trunkH - 0.4, 0.18);
+  bunch.position.set(0.24, trunkH - 0.4, 0.2);
   bunch.castShadow = true;
   group.add(bunch);
 
   return group;
 }
 
-// ─── 3. REALISTIC PLANTAIN / BANANA (Musa paradisiaca) ───────────────────────
+// ─── 4. REALISTIC PLANTAIN / BANANA (Musa paradisiaca) ───────────────────────
 export function buildCleanPlantain(x = 0, z = 0): THREE.Group {
   const group = new THREE.Group();
   group.position.set(x, 0, z);
   group.userData.swayable = true;
   group.userData.swayPhase = Math.random() * Math.PI * 2;
 
-  const stemH = 3.2 + Math.random() * 0.5;
+  const stemH = 3.4 + Math.random() * 0.5;
 
-  const barkTex = getBarkTexture(0x4d7c0f);
+  const barkTex = getBarkTexture(0x4d7c0f, 'palm');
   const pstemMat = getCleanPBR({
     map: barkTex.map,
     bumpMap: barkTex.bumpMap,
@@ -289,7 +404,7 @@ export function buildCleanPlantain(x = 0, z = 0): THREE.Group {
     clearcoat: 0.2,
   });
 
-  const pstemGeo = new THREE.CylinderGeometry(0.14, 0.24, stemH, 20);
+  const pstemGeo = new THREE.CylinderGeometry(0.15, 0.26, stemH, 20);
   pstemGeo.computeVertexNormals();
   const pstem = new THREE.Mesh(pstemGeo, pstemMat);
   pstem.position.y = stemH / 2;
@@ -303,21 +418,22 @@ export function buildCleanPlantain(x = 0, z = 0): THREE.Group {
     alphaMap: leafTex.alphaMap,
     bumpMap: leafTex.bumpMap,
     bumpScale: 0.06,
+    roughnessMap: leafTex.roughnessMap,
     transparent: true,
     alphaTest: 0.3,
     roughness: 0.35,
     clearcoat: 0.45,
   });
 
-  const leafCount = 7;
+  const leafCount = 8;
   for (let l = 0; l < leafCount; l++) {
     const angle = (l / leafCount) * Math.PI * 2 + (l * 0.15);
     const leafGroup = new THREE.Group();
     leafGroup.position.set(0, stemH - 0.1, 0);
     leafGroup.rotation.y = angle;
 
-    const leafMesh = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 0.95), leafMat);
-    leafMesh.position.set(1.3, 0.35, 0);
+    const leafMesh = new THREE.Mesh(new THREE.PlaneGeometry(2.8, 1.05), leafMat);
+    leafMesh.position.set(1.4, 0.38, 0);
     leafMesh.rotation.x = Math.PI / 2.2;
     leafMesh.rotation.y = 0.12;
     leafMesh.castShadow = true;
@@ -328,25 +444,25 @@ export function buildCleanPlantain(x = 0, z = 0): THREE.Group {
 
   // Banana Hands & Terminal Blossom
   const bunchGroup = new THREE.Group();
-  bunchGroup.position.set(0.28, stemH - 0.45, 0.16);
+  bunchGroup.position.set(0.3, stemH - 0.45, 0.18);
 
   const bananaMat = getCleanPBR({ color: 0xfacc15, roughness: 0.3, clearcoat: 0.45 });
-  for (let b = 0; b < 10; b++) {
-    const ringAngle = (b / 10) * Math.PI * 2;
-    const bananaGeo = new THREE.CylinderGeometry(0.024, 0.016, 0.36, 12);
+  for (let b = 0; b < 12; b++) {
+    const ringAngle = (b / 12) * Math.PI * 2;
+    const bananaGeo = new THREE.CylinderGeometry(0.026, 0.018, 0.38, 12);
     bananaGeo.computeVertexNormals();
     const banana = new THREE.Mesh(bananaGeo, bananaMat);
-    banana.position.set(Math.cos(ringAngle) * 0.16, -0.08 - (b * 0.035), Math.sin(ringAngle) * 0.16);
+    banana.position.set(Math.cos(ringAngle) * 0.18, -0.08 - (b * 0.035), Math.sin(ringAngle) * 0.18);
     banana.rotation.set(0.35, ringAngle, 0.25);
     banana.castShadow = true;
     bunchGroup.add(banana);
   }
 
-  const bellGeo = new THREE.ConeGeometry(0.1, 0.28, 16);
+  const bellGeo = new THREE.ConeGeometry(0.11, 0.3, 16);
   bellGeo.computeVertexNormals();
   const bellMat = getCleanPBR({ color: 0x7e22ce, roughness: 0.35, clearcoat: 0.45 });
   const bell = new THREE.Mesh(bellGeo, bellMat);
-  bell.position.set(0, -0.55, 0);
+  bell.position.set(0, -0.6, 0);
   bell.rotation.x = Math.PI;
   bell.castShadow = true;
   bunchGroup.add(bell);
@@ -355,14 +471,14 @@ export function buildCleanPlantain(x = 0, z = 0): THREE.Group {
   return group;
 }
 
-// ─── 4. REALISTIC MAIZE / CORN (Zea mays) ────────────────────────────────────
+// ─── 5. REALISTIC MAIZE / CORN (Zea mays) ────────────────────────────────────
 export function buildCleanMaize(x = 0, z = 0): THREE.Group {
   const group = new THREE.Group();
   group.position.set(x, 0, z);
   group.userData.swayable = true;
   group.userData.swayPhase = Math.random() * Math.PI * 2;
 
-  const height = 2.2 + Math.random() * 0.3;
+  const height = 2.3 + Math.random() * 0.3;
 
   const stalkGeo = new THREE.CylinderGeometry(0.025, 0.04, height, 16);
   stalkGeo.computeVertexNormals();
@@ -378,6 +494,7 @@ export function buildCleanMaize(x = 0, z = 0): THREE.Group {
     alphaMap: leafTex.alphaMap,
     bumpMap: leafTex.bumpMap,
     bumpScale: 0.05,
+    roughnessMap: leafTex.roughnessMap,
     transparent: true,
     alphaTest: 0.35,
     roughness: 0.38,
@@ -387,7 +504,7 @@ export function buildCleanMaize(x = 0, z = 0): THREE.Group {
   for (let i = 1; i <= 6; i++) {
     const side = i % 2 === 0 ? 1 : -1;
     const nodeY = (i / 7) * height;
-    const leaf = new THREE.Mesh(new THREE.PlaneGeometry(0.35, 1.2), leafMat);
+    const leaf = new THREE.Mesh(new THREE.PlaneGeometry(0.35, 1.25), leafMat);
     leaf.position.set(side * 0.4, nodeY, 0);
     leaf.rotation.set(0.2, i * 0.7, side * 0.4);
     leaf.castShadow = true;
@@ -415,7 +532,7 @@ export function buildCleanMaize(x = 0, z = 0): THREE.Group {
   return group;
 }
 
-// ─── 5. REALISTIC YAM MOUND & VINES (Dioscorea rotundata) ─────────────────────
+// ─── 6. REALISTIC YAM MOUND & VINES (Dioscorea rotundata) ─────────────────────
 export function buildCleanYamMound(x = 0, z = 0): THREE.Group {
   const group = new THREE.Group();
   group.position.set(x, 0, z);
@@ -457,6 +574,7 @@ export function buildCleanYamMound(x = 0, z = 0): THREE.Group {
     alphaMap: yamLeafTex.alphaMap,
     bumpMap: yamLeafTex.bumpMap,
     bumpScale: 0.05,
+    roughnessMap: yamLeafTex.roughnessMap,
     transparent: true,
     alphaTest: 0.3,
     roughness: 0.35,
@@ -478,7 +596,7 @@ export function buildCleanYamMound(x = 0, z = 0): THREE.Group {
   return group;
 }
 
-// ─── 6. REALISTIC SCULPTED FAUNA (Exported from SculptedFauna) ───────────────
+// ─── 7. REALISTIC SCULPTED FAUNA (Exported from SculptedFauna) ───────────────
 export {
   buildSculptedChicken as buildCleanChicken,
   buildSculptedGoat as buildCleanGoat,
