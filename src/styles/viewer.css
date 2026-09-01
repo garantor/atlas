@@ -1,0 +1,254 @@
+/* Farm Atlas — 3D Viewer Styles */
+
+.farm-viewer-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  background: var(--surface-viewer);
+  overflow: hidden;
+  border-radius: var(--r-lg);
+  box-shadow: inset 0 0 0 1px var(--border);
+  transition: background var(--dur-slow) var(--ease-out);
+}
+
+.farm-viewer-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+}
+.farm-viewer-canvas:active { cursor: grabbing; }
+
+/* ─── Loading Overlay ─── */
+.viewer-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  background: var(--surface-viewer);
+  z-index: 5;
+  animation: fadeIn var(--dur-slow) var(--ease-out);
+}
+
+.viewer-loading-icon {
+  font-size: 48px;
+  animation: spin 3s linear infinite;
+}
+
+.viewer-loading p {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* ─── Floating Controls ─── */
+.viewer-controls {
+  position: absolute;
+  bottom: var(--space-4);
+  right: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  z-index: 10;
+}
+
+.viewer-controls-row {
+  display: flex;
+  gap: var(--space-2);
+}
+
+/* ─── View State Selector ─── */
+.view-state-selector {
+  position: absolute;
+  top: var(--space-4);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  display: flex;
+  background: var(--glass);
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--r-full);
+  padding: 3px;
+  gap: 2px;
+  box-shadow: var(--shadow-raised);
+  animation: slideUp var(--dur-slow) var(--ease-out) both;
+}
+
+.view-state-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 7px var(--space-4);
+  border: none;
+  border-radius: var(--r-full);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  background: transparent;
+  color: var(--muted);
+  transition: all var(--dur-fast) var(--ease-out);
+  white-space: nowrap;
+}
+
+.view-state-btn:hover {
+  color: var(--ink);
+  background: var(--green-wash);
+}
+
+.view-state-btn.active {
+  background: var(--green-primary);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(31, 91, 52, 0.35);
+}
+
+[data-theme="dark"] .view-state-btn.active {
+  background: var(--green-mid);
+  box-shadow: 0 2px 12px rgba(76, 175, 80, 0.4);
+}
+
+.view-state-icon {
+  font-size: 14px;
+  line-height: 1;
+}
+
+/* ─── Season / Time Control ─── */
+.viewer-time-bar {
+  position: absolute;
+  bottom: var(--space-4);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  background: var(--glass);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--r-full);
+  padding: 6px var(--space-4);
+  box-shadow: var(--shadow-card);
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.viewer-time-bar .time-icon { font-size: 16px; }
+
+/* ─── Hotspot Markers ─── */
+.hotspot-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 8;
+}
+
+.hotspot-marker {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  pointer-events: all;
+  cursor: pointer;
+}
+
+.hotspot-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--harvest-gold);
+  border: 2px solid rgba(255,255,255,0.8);
+  box-shadow: 0 0 0 0 rgba(245, 166, 35, 0.5);
+  animation: pulse-ring 2s ease-out infinite;
+  transition: transform var(--dur-fast) var(--ease-bounce);
+}
+
+.hotspot-marker:hover .hotspot-dot {
+  transform: scale(1.4);
+  animation: none;
+  box-shadow: 0 0 12px rgba(245, 166, 35, 0.6);
+}
+
+.hotspot-callout {
+  position: absolute;
+  left: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--r-md);
+  padding: var(--space-3) var(--space-4);
+  min-width: 180px;
+  max-width: 240px;
+  box-shadow: var(--shadow-float);
+  animation: scaleIn var(--dur-mid) var(--ease-bounce) both;
+  pointer-events: all;
+}
+
+.hotspot-callout h4 {
+  font-family: var(--font-serif);
+  font-size: 13px;
+  color: var(--ink-strong);
+  margin-bottom: 2px;
+}
+
+.hotspot-callout .sci-name {
+  font-style: italic;
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: var(--space-2);
+}
+
+.hotspot-callout p {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+/* ─── Layer Filter Chips ─── */
+.layer-filters {
+  position: absolute;
+  top: var(--space-4);
+  right: var(--space-4);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  animation: slideRight var(--dur-slow) var(--ease-out) 200ms both;
+}
+
+.layer-chip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 5px var(--space-3);
+  border-radius: var(--r-full);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: var(--muted);
+  transition: all var(--dur-fast) var(--ease-out);
+  white-space: nowrap;
+}
+
+.layer-chip.on {
+  border-color: var(--green-muted);
+  color: var(--green-primary);
+  background: var(--green-wash);
+}
+
+.layer-chip-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}

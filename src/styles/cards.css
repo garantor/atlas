@@ -1,0 +1,469 @@
+/* Farm Atlas — Educational Cards & Modals */
+
+/* ─── Educational Grid ─── */
+.edu-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--space-4);
+  padding: var(--space-5);
+}
+
+.edu-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+  cursor: pointer;
+  transition: all var(--dur-mid) var(--ease-out);
+  display: flex;
+  flex-direction: column;
+}
+
+.edu-card:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-raised);
+  transform: translateY(-2px);
+}
+
+.edu-card-header {
+  padding: var(--space-4);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  border-bottom: 1px solid var(--border);
+}
+
+.edu-card-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--r-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.edu-card-icon.botany        { background: rgba(46,125,50,0.12);  }
+.edu-card-icon.soil          { background: rgba(121,85,72,0.12);  }
+.edu-card-icon.pest          { background: rgba(123,31,162,0.10); }
+.edu-card-icon.water         { background: rgba(25,118,210,0.10); }
+.edu-card-icon.economics     { background: rgba(245,166,35,0.12); }
+.edu-card-icon.culture       { background: rgba(194,24,91,0.10);  }
+
+.edu-card-body {
+  padding: var(--space-4);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.edu-card-title {
+  font-family: var(--font-serif);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink-strong);
+  line-height: 1.3;
+}
+
+.edu-card-excerpt {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.6;
+  flex: 1;
+}
+
+.edu-card-footer {
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.edu-card-read {
+  font-size: 12px;
+  color: var(--green-primary);
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: gap var(--dur-fast) var(--ease-out);
+}
+
+.edu-card:hover .edu-card-read { gap: 8px; }
+
+/* ─── Card Detail Modal ─── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-5);
+  animation: fadeIn var(--dur-mid) var(--ease-out) both;
+}
+
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.modal-content {
+  position: relative;
+  z-index: 1;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  box-shadow: var(--shadow-modal);
+  max-width: 720px;
+  width: 100%;
+  max-height: 85dvh;
+  overflow-y: auto;
+  animation: scaleIn var(--dur-mid) var(--ease-bounce) both;
+}
+
+.modal-content::-webkit-scrollbar { width: 4px; }
+
+.modal-header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-5) var(--space-6);
+  background: var(--glass);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+  border-radius: var(--r-xl) var(--r-xl) 0 0;
+}
+
+.modal-header h2 {
+  font-size: 18px;
+}
+
+.modal-close {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--surface-raised);
+  color: var(--muted);
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--dur-fast) var(--ease-out);
+  flex-shrink: 0;
+}
+
+.modal-close:hover {
+  background: rgba(183, 28, 28, 0.1);
+  border-color: var(--status-bad);
+  color: var(--status-bad);
+}
+
+.modal-body {
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.modal-sci-name {
+  font-family: var(--font-serif);
+  font-style: italic;
+  color: var(--muted);
+  font-size: 15px;
+  margin-top: -var(--space-2);
+}
+
+.modal-section h3 {
+  font-size: 14px;
+  margin-bottom: var(--space-3);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-section p {
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--ink);
+}
+
+/* ─── Data Table ─── */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.data-table th,
+.data-table td {
+  padding: var(--space-2) var(--space-3);
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.data-table th {
+  font-weight: 600;
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  background: var(--surface-sunk);
+}
+
+.data-table td:last-child { text-align: right; }
+
+/* ─── Lesson Modal ─── */
+.lesson-progress {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-6);
+  border-bottom: 1px solid var(--border);
+}
+
+.lesson-progress-dots {
+  display: flex;
+  gap: var(--space-2);
+  flex: 1;
+}
+
+.lesson-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--border-strong);
+  transition: background var(--dur-mid) var(--ease-out),
+              transform var(--dur-mid) var(--ease-bounce);
+}
+
+.lesson-dot.done    { background: var(--green-light); }
+.lesson-dot.current { background: var(--green-primary); transform: scale(1.3); }
+
+.lesson-step {
+  padding: var(--space-5) var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  animation: slideUp var(--dur-mid) var(--ease-out) both;
+}
+
+.lesson-step-num {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--green-primary);
+}
+
+.lesson-illustration {
+  font-size: 64px;
+  text-align: center;
+  padding: var(--space-6) 0;
+  line-height: 1;
+}
+
+.lesson-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-6);
+  border-top: 1px solid var(--border);
+}
+
+/* ─── Quiz Modal ─── */
+.quiz-question {
+  font-family: var(--font-serif);
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--ink-strong);
+  padding: var(--space-5) var(--space-6);
+}
+
+.quiz-options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: 0 var(--space-6) var(--space-5);
+}
+
+.quiz-option {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+  background: var(--surface-raised);
+  font-size: 14px;
+  color: var(--ink);
+  cursor: pointer;
+  transition: all var(--dur-fast) var(--ease-out);
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.quiz-option:hover:not(:disabled) {
+  border-color: var(--green-muted);
+  background: var(--green-wash);
+}
+
+.quiz-option.correct {
+  border-color: var(--status-good);
+  background: rgba(46,125,50,0.1);
+  color: var(--status-good);
+}
+
+.quiz-option.wrong {
+  border-color: var(--status-bad);
+  background: rgba(183,28,28,0.08);
+  color: var(--status-bad);
+}
+
+.quiz-option-letter {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--surface-sunk);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+}
+
+.quiz-score {
+  text-align: center;
+  padding: var(--space-8) var(--space-6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.quiz-score-value {
+  font-family: var(--font-mono);
+  font-size: 72px;
+  font-weight: 500;
+  color: var(--harvest-gold);
+  line-height: 1;
+}
+
+/* ─── Search Modal ─── */
+.search-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 80px var(--space-5) var(--space-5);
+}
+
+.search-box {
+  width: 100%;
+  max-width: 560px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-xl);
+  box-shadow: var(--shadow-modal);
+  overflow: hidden;
+  animation: slideUp var(--dur-mid) var(--ease-bounce) both;
+}
+
+.search-input-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--border);
+}
+
+.search-icon { font-size: 18px; color: var(--muted); }
+
+.search-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-family: var(--font-sans);
+  font-size: 16px;
+  color: var(--ink);
+  outline: none;
+}
+
+.search-input::placeholder { color: var(--muted-soft); }
+
+.search-kbd {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted-soft);
+  padding: 2px 6px;
+  border-radius: var(--r-xs);
+  border: 1px solid var(--border-strong);
+  background: var(--surface-sunk);
+}
+
+.search-results {
+  max-height: 400px;
+  overflow-y: auto;
+  padding: var(--space-2) 0;
+}
+
+.search-group-label {
+  padding: var(--space-2) var(--space-5);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted-soft);
+}
+
+.search-result-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-5);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+.search-result-item:hover,
+.search-result-item.focused {
+  background: var(--green-wash);
+}
+
+.search-result-icon { font-size: 18px; }
+
+.search-result-info { flex: 1; }
+
+.search-result-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.search-result-type {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.search-empty {
+  padding: var(--space-10);
+  text-align: center;
+  color: var(--muted);
+  font-size: 14px;
+}

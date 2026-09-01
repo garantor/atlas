@@ -1,0 +1,556 @@
+/*
+ * Farm Atlas — Global Styles
+ */
+
+@import './tokens.css';
+
+/* ─── Reset ──────────────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--bg);
+  color: var(--ink);
+  line-height: 1.5;
+  height: 100%;
+  overflow: hidden;
+  transition: background var(--dur-slow) var(--ease-out),
+              color var(--dur-slow) var(--ease-out);
+}
+
+#root { height: 100%; display: flex; flex-direction: column; }
+
+img, svg { display: block; max-width: 100%; }
+button { font-family: inherit; }
+input, button { font-size: inherit; }
+
+/* ─── Scrollbars ─────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: var(--green-muted); }
+
+/* ─── Typography ─────────────────────────────────────────────────────────────── */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-serif);
+  color: var(--ink-strong);
+  line-height: 1.25;
+  font-weight: 600;
+}
+h1 { font-size: clamp(1.5rem, 2.5vw, 2.25rem); }
+h2 { font-size: clamp(1.2rem, 1.8vw, 1.6rem); }
+h3 { font-size: 1.1rem; }
+h4 { font-size: 0.95rem; }
+
+p { line-height: 1.65; }
+
+/* ─── Root Layout ────────────────────────────────────────────────────────────── */
+.atlas-root {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.atlas-header {
+  height: var(--header-h);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: 0 var(--space-5);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  z-index: 100;
+  transition: background var(--dur-slow) var(--ease-out),
+              border-color var(--dur-slow) var(--ease-out);
+}
+
+.atlas-main {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ─── Header Internals ───────────────────────────────────────────────────────── */
+.header-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-shrink: 0;
+}
+
+.header-brand-icon {
+  font-size: 24px;
+  line-height: 1;
+  animation: leafSway 4s ease-in-out infinite;
+}
+
+.header-brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1;
+}
+
+.header-brand-title {
+  font-family: var(--font-serif);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink-strong);
+  letter-spacing: -0.01em;
+}
+
+.header-brand-sub {
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+
+.header-biome-tabs {
+  display: flex;
+  gap: 2px;
+  flex: 1;
+  justify-content: center;
+}
+
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-shrink: 0;
+}
+
+.season-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.search-trigger {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 12px;
+}
+
+.search-hint { color: var(--muted); }
+
+/* ─── Viewer Column ──────────────────────────────────────────────────────────── */
+.viewer-column {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-3);
+  gap: var(--space-3);
+  overflow: hidden;
+}
+
+/* ─── Detail Panel ───────────────────────────────────────────────────────────── */
+.detail-panel {
+  width: var(--detail-w);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  overflow: hidden;
+  transition: background var(--dur-slow) var(--ease-out);
+}
+
+.detail-empty {
+  align-items: center;
+  justify-content: center;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  text-align: center;
+  padding: var(--space-8);
+  color: var(--muted);
+}
+
+.empty-icon { font-size: 48px; line-height: 1; }
+
+.detail-header {
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.detail-hero {
+  padding: var(--space-4);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.detail-farm-icon {
+  font-size: 32px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.detail-farm-name {
+  font-size: 16px;
+  margin-bottom: 2px;
+  line-height: 1.2;
+}
+
+.detail-farm-sub {
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: var(--space-2);
+}
+
+.detail-farm-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.time-slider-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--border);
+}
+
+.time-slider {
+  flex: 1;
+  -webkit-appearance: none;
+  height: 3px;
+  border-radius: var(--r-full);
+  background: linear-gradient(90deg, var(--harvest-gold), var(--surface-sunk));
+  outline: none;
+  cursor: pointer;
+}
+
+.time-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--harvest-gold);
+  border: 2px solid var(--surface);
+  box-shadow: 0 0 4px rgba(245, 166, 35, 0.5);
+  cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.time-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+.time-icon { font-size: 16px; }
+.time-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+  min-width: 52px;
+}
+
+.detail-scroll {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-4);
+}
+
+.detail-section { display: flex; flex-direction: column; gap: var(--space-3); }
+
+.detail-description {
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--ink);
+}
+
+.section-title {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--border);
+}
+
+/* ─── Species Grid ───────────────────────────────────────────────────────────── */
+.species-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.species-chip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--r-md);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  transition: all var(--dur-fast) var(--ease-out);
+}
+
+.species-chip:hover {
+  border-color: var(--border-strong);
+  background: var(--green-wash);
+}
+
+.species-icon { font-size: 18px; flex-shrink: 0; }
+
+.species-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.species-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.species-sci {
+  font-size: 10px;
+  color: var(--muted);
+  font-style: italic;
+}
+
+.n2-badge {
+  font-size: 9px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--particle-n2);
+  background: rgba(105, 240, 174, 0.12);
+  padding: 2px 5px;
+  border-radius: var(--r-xs);
+  border: 1px solid rgba(105, 240, 174, 0.25);
+}
+
+.pollinator-badge { font-size: 14px; }
+
+/* ─── Simulation Panel ───────────────────────────────────────────────────────── */
+.simulation-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.synergy-item {
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.metric-synergy-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: var(--space-2);
+}
+
+/* ─── Edu Section ────────────────────────────────────────────────────────────── */
+.edu-section { display: flex; flex-direction: column; gap: var(--space-3); }
+
+.edu-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* ─── Highlight List ─────────────────────────────────────────────────────────── */
+.highlight-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  list-style: none;
+}
+
+.highlight-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  font-size: 12px;
+  color: var(--ink);
+  line-height: 1.5;
+}
+
+.highlight-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--green-primary);
+  flex-shrink: 0;
+  margin-top: 5px;
+}
+
+/* ─── Tags ───────────────────────────────────────────────────────────────────── */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: var(--r-full);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.tag-green {
+  background: rgba(46,125,50,0.12);
+  color: var(--status-good);
+  border: 1px solid rgba(46,125,50,0.2);
+}
+
+.tag-amber {
+  background: rgba(245,166,35,0.12);
+  color: var(--harvest-gold);
+  border: 1px solid rgba(245,166,35,0.2);
+}
+
+.ler-badge {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--harvest-gold);
+  background: rgba(245,166,35,0.1);
+  padding: 2px 8px;
+  border-radius: var(--r-full);
+  border: 1px solid rgba(245,166,35,0.2);
+  flex-shrink: 0;
+}
+
+/* ─── Buttons ────────────────────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--r-md);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: all var(--dur-fast) var(--ease-out);
+}
+
+.btn-sm { padding: 4px var(--space-3); font-size: 12px; }
+
+.btn-primary {
+  background: var(--green-primary);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(46,125,50,0.3);
+}
+
+.btn-primary:hover {
+  background: var(--green-mid);
+  box-shadow: 0 4px 12px rgba(46,125,50,0.4);
+  transform: translateY(-1px);
+}
+
+.btn-primary:active { transform: translateY(0); }
+
+.btn-primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-ghost {
+  background: var(--surface-raised);
+  color: var(--ink);
+  border: 1px solid var(--border);
+}
+
+.btn-ghost:hover {
+  border-color: var(--border-strong);
+  background: var(--green-wash);
+}
+
+.btn-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+  background: var(--surface-raised);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  transition: all var(--dur-fast) var(--ease-out);
+  color: var(--ink);
+}
+
+.btn-icon:hover {
+  border-color: var(--border-strong);
+  background: var(--green-wash);
+  transform: scale(1.05);
+}
+
+/* ─── Formula Box ────────────────────────────────────────────────────────────── */
+.formula-box {
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-sunk);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  border-left: 3px solid var(--harvest-gold);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  overflow-x: auto;
+}
+
+/* ─── Animations ─────────────────────────────────────────────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideRight {
+  from { opacity: 0; transform: translateX(16px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes leafSway {
+  0%, 100% { transform: rotate(-5deg); }
+  50%       { transform: rotate(5deg); }
+}
+
+@keyframes pulse-ring {
+  0% { box-shadow: 0 0 0 0 rgba(245, 166, 35, 0.5); }
+  70% { box-shadow: 0 0 0 10px rgba(245, 166, 35, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(245, 166, 35, 0); }
+}

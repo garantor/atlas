@@ -1,0 +1,160 @@
+/* Farm Atlas — Farm Library Sidebar */
+
+.farm-library {
+  width: var(--sidebar-w);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  overflow: hidden;
+  transition: width var(--dur-slow) var(--ease-out);
+}
+
+.farm-library.collapsed {
+  width: 0;
+  border-right-color: transparent;
+}
+
+.library-header {
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.library-header h3 {
+  font-size: 13px;
+  letter-spacing: 0.02em;
+}
+
+.library-count {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+  background: var(--surface-sunk);
+  padding: 2px 8px;
+  border-radius: var(--r-full);
+  border: 1px solid var(--border);
+}
+
+.library-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* ─── Farm Card in Library ─── */
+.farm-card {
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+  background: var(--surface-raised);
+  cursor: pointer;
+  overflow: hidden;
+  transition: all var(--dur-mid) var(--ease-out);
+  position: relative;
+}
+
+.farm-card:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-sm);
+  transform: translateX(2px);
+}
+
+.farm-card.active {
+  border-color: var(--green-muted);
+  background: var(--green-wash);
+  box-shadow: 0 0 0 2px var(--green-primary);
+}
+
+.farm-card-accent {
+  height: 3px;
+  width: 100%;
+}
+
+.farm-card-body {
+  padding: var(--space-3) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.farm-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.farm-card-name {
+  font-family: var(--font-serif);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-strong);
+  line-height: 1.3;
+}
+
+.farm-card-biome {
+  font-size: 10px;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.farm-card-icons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin: var(--space-1) 0;
+}
+
+.farm-card-crop-icon {
+  font-size: 16px;
+  line-height: 1;
+  title: attr(title);
+}
+
+.farm-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.farm-card-crops-count {
+  font-size: 11px;
+  color: var(--muted-soft);
+}
+
+/* ─── Biome Filter Tabs ─── */
+.library-filter-tabs {
+  display: flex;
+  gap: 2px;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.biome-tab {
+  flex: 1;
+  padding: 5px var(--space-2);
+  border-radius: var(--r-sm);
+  font-size: 11px;
+  font-weight: 500;
+  text-align: center;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  transition: all var(--dur-fast) var(--ease-out);
+  white-space: nowrap;
+}
+
+.biome-tab:hover { background: var(--green-wash); color: var(--green-primary); }
+.biome-tab.active {
+  background: var(--green-primary);
+  color: #fff;
+}

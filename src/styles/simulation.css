@@ -1,0 +1,327 @@
+/* Farm Atlas — Simulation & Intercropping Sandbox Styles */
+
+/* ─── Synergy HUD ─── */
+.synergy-hud {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-card);
+}
+
+.hud-title {
+  font-family: var(--font-serif);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-strong);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--border);
+}
+
+/* ─── LER Radial Gauge ─── */
+.ler-gauge-wrap {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.ler-gauge-svg {
+  flex-shrink: 0;
+}
+
+.ler-gauge-track {
+  fill: none;
+  stroke: var(--border);
+  stroke-width: 6;
+}
+
+.ler-gauge-fill {
+  fill: none;
+  stroke: var(--harvest-gold);
+  stroke-width: 6;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 600ms var(--ease-out),
+              stroke 400ms var(--ease-out);
+}
+
+.ler-gauge-label {
+  text-anchor: middle;
+  dominant-baseline: middle;
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: 500;
+  fill: var(--harvest-gold);
+}
+
+.ler-gauge-sub {
+  text-anchor: middle;
+  dominant-baseline: middle;
+  font-family: var(--font-sans);
+  font-size: 8px;
+  fill: var(--muted);
+}
+
+.ler-gauge-info {
+  flex: 1;
+}
+
+.ler-gauge-info h4 {
+  font-size: 13px;
+  margin-bottom: 2px;
+}
+
+.ler-status {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: var(--r-full);
+  font-weight: 500;
+}
+
+.ler-status.good  { background: rgba(46,125,50,0.12); color: var(--status-good); }
+.ler-status.warn  { background: rgba(230,81,0,0.10);  color: var(--status-warn); }
+.ler-status.bad   { background: rgba(183,28,28,0.10); color: var(--status-bad);  }
+
+/* ─── Metric Bars ─── */
+.metric-bar-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.metric-bar-item {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.metric-bar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+}
+
+.metric-bar-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.metric-bar-value {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.metric-bar-track {
+  height: 6px;
+  border-radius: var(--r-full);
+  background: var(--surface-sunk);
+  overflow: hidden;
+}
+
+.metric-bar-fill {
+  height: 100%;
+  border-radius: var(--r-full);
+  transition: width 600ms var(--ease-out);
+}
+
+.metric-bar-fill.water  { background: linear-gradient(90deg, var(--particle-water), #81d4fa); }
+.metric-bar-fill.n2     { background: linear-gradient(90deg, var(--particle-n2), #a5d6a7); }
+.metric-bar-fill.weed   { background: linear-gradient(90deg, var(--harvest-gold), var(--harvest-light)); }
+.metric-bar-fill.pest   { background: linear-gradient(90deg, var(--particle-pest), #ce93d8); }
+.metric-bar-fill.par    { background: linear-gradient(90deg, var(--particle-par), #fff176); }
+
+/* ─── Intercropping Sandbox ─── */
+.sandbox-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-card);
+}
+
+.sandbox-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sandbox-header h3 {
+  font-size: 15px;
+}
+
+/* ─── Crop Palette ─── */
+.crop-palette {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.crop-category-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted-soft);
+  padding: var(--space-2) 0 var(--space-1);
+}
+
+.crop-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.crop-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px var(--space-3);
+  border-radius: var(--r-full);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--surface-raised);
+  color: var(--ink);
+  transition: all var(--dur-fast) var(--ease-out);
+  user-select: none;
+}
+
+.crop-chip:hover {
+  background: var(--green-wash);
+  border-color: var(--green-muted);
+  color: var(--green-primary);
+  transform: translateY(-1px);
+}
+
+.crop-chip.selected {
+  background: var(--green-primary);
+  border-color: var(--green-primary);
+  color: #fff;
+}
+
+.crop-chip.selected:hover {
+  background: var(--green-mid);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.crop-chip-icon {
+  font-size: 14px;
+  line-height: 1;
+}
+
+/* ─── Sandbox Field Grid ─── */
+.sandbox-field {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--surface-sunk);
+  border-radius: var(--r-md);
+  border: 1px dashed var(--border-strong);
+  min-height: 120px;
+}
+
+.sandbox-plot {
+  aspect-ratio: 1;
+  border-radius: var(--r-sm);
+  border: 1px dashed var(--border);
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  cursor: pointer;
+  transition: all var(--dur-fast) var(--ease-out);
+  font-size: 11px;
+  color: var(--muted-soft);
+  position: relative;
+  overflow: hidden;
+}
+
+.sandbox-plot:hover {
+  border-color: var(--green-muted);
+  background: var(--green-wash);
+}
+
+.sandbox-plot.occupied {
+  border-color: var(--border-strong);
+  background: var(--green-wash);
+  cursor: default;
+}
+
+.sandbox-plot-icon {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.sandbox-plot-name {
+  font-size: 9px;
+  color: var(--muted);
+  text-align: center;
+  line-height: 1.2;
+}
+
+.sandbox-plot-remove {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--status-bad);
+  color: #fff;
+  border: none;
+  font-size: 9px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+
+.sandbox-plot.occupied:hover .sandbox-plot-remove { opacity: 1; }
+
+/* ─── Compatibility Warning ─── */
+.compat-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--r-md);
+  background: rgba(230,81,0,0.08);
+  border: 1px solid rgba(230,81,0,0.2);
+  font-size: 12px;
+  color: var(--status-warn);
+  animation: slideUp var(--dur-mid) var(--ease-out) both;
+}
+
+.compat-success {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--r-md);
+  background: rgba(46,125,50,0.08);
+  border: 1px solid rgba(46,125,50,0.2);
+  font-size: 12px;
+  color: var(--status-good);
+  animation: slideUp var(--dur-mid) var(--ease-out) both;
+}
