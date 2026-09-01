@@ -1,10 +1,12 @@
 /**
  * Farm Atlas — FarmRenderer
- * Lighting rig, floating diorama pedestal, sky atmosphere, season/time control
+ * Museum-grade lighting rig, pristine PBR diorama pedestal, and studio atmosphere.
  */
 
 import * as THREE from 'three';
 import type { FarmEcosystem, Season } from '../data/types';
+import { getCleanPBR } from './CleanBotanicalModels';
+import { getSoilTexture } from './TextureGenerator';
 
 export class FarmRenderer {
   private scene: THREE.Scene;
@@ -29,68 +31,73 @@ export class FarmRenderer {
     this.scene = scene;
     this.renderer = renderer;
 
-    // ─── Sun / Key Light with Soft Shadows ───────────────────────────────────
-    this.sunLight = new THREE.DirectionalLight(0xfff7ed, 2.8);
-    this.sunLight.position.set(12, 18, 10);
+    // ─── 1. Studio Key Light (Soft Warm Sun with Clean Penumbra) ─────────────
+    this.sunLight = new THREE.DirectionalLight(0xfff7ed, 3.0);
+    this.sunLight.position.set(14, 20, 12);
     this.sunLight.castShadow = true;
     this.sunLight.shadow.mapSize.set(2048, 2048);
     this.sunLight.shadow.camera.near = 0.5;
-    this.sunLight.shadow.camera.far = 60;
-    this.sunLight.shadow.camera.left = -16;
-    this.sunLight.shadow.camera.right = 16;
-    this.sunLight.shadow.camera.top = 16;
-    this.sunLight.shadow.camera.bottom = -16;
-    this.sunLight.shadow.bias = -0.0005;
-    this.sunLight.shadow.radius = 2.5;
+    this.sunLight.shadow.camera.far = 70;
+    this.sunLight.shadow.camera.left = -15;
+    this.sunLight.shadow.camera.right = 15;
+    this.sunLight.shadow.camera.top = 15;
+    this.sunLight.shadow.camera.bottom = -15;
+    this.sunLight.shadow.bias = -0.0004;
+    this.sunLight.shadow.radius = 2.8;
     scene.add(this.sunLight);
 
-    // ─── Sky / Fill Bounce Light ─────────────────────────────────────────────
+    // ─── 2. Sky & Ambient Fill (Soft Diffuse Bounce) ──────────────────────────
     this.fillLight = new THREE.HemisphereLight(
-      0x38bdf8,  // sky blue
-      0x166534,  // ground forest green
-      0.9
+      0xbae6fd,  // pristine soft sky blue
+      0x14532d,  // rich forest ground bounce
+      0.95
     );
     scene.add(this.fillLight);
 
-    this.ambientLight = new THREE.AmbientLight(0xffffff, 0.35);
+    this.ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
     scene.add(this.ambientLight);
 
-    // ─── Rim Light (Warm Golden / Emerald Accent) ────────────────────────────
-    this.rimLight = new THREE.DirectionalLight(0xfef08a, 0.8);
-    this.rimLight.position.set(-10, 12, -12);
+    // ─── 3. Silhouette Rim Light (Clean Specular Contours) ───────────────────
+    this.rimLight = new THREE.DirectionalLight(0xfef08a, 0.9);
+    this.rimLight.position.set(-12, 14, -14);
     scene.add(this.rimLight);
 
-    // ─── Stylized Floating Diorama Pedestal ───────────────────────────────────
-    // Top organic grass surface
+    // ─── 4. Pristine PBR Diorama Pedestal with Organic Soil Texture ──────────
     const islandGeo = new THREE.CylinderGeometry(8.2, 8.4, 0.6, 64);
-    const islandMat = new THREE.MeshStandardMaterial({
-      color: 0x15803d,
-      roughness: 0.85,
-      metalness: 0.05,
+    islandGeo.computeVertexNormals();
+    const soilTex = getSoilTexture(0x15803d);
+    const islandMat = getCleanPBR({
+      map: soilTex.map,
+      bumpMap: soilTex.bumpMap,
+      bumpScale: 0.05,
+      roughness: 0.8,
+      clearcoat: 0.15,
+      clearcoatRoughness: 0.2,
     });
     this.islandMesh = new THREE.Mesh(islandGeo, islandMat);
     this.islandMesh.position.y = -0.3;
     this.islandMesh.receiveShadow = true;
     scene.add(this.islandMesh);
 
-    // Stratified soil bedrock rim
+    // Soil Stratified Rim
     const rimGeo = new THREE.CylinderGeometry(8.4, 7.6, 1.2, 64);
-    const rimMat = new THREE.MeshStandardMaterial({
+    rimGeo.computeVertexNormals();
+    const rimMat = getCleanPBR({
       color: 0x451a03,
-      roughness: 0.95,
-      metalness: 0.0,
+      roughness: 0.9,
+      clearcoat: 0.05,
     });
     this.islandRim = new THREE.Mesh(rimGeo, rimMat);
     this.islandRim.position.y = -1.1;
     this.islandRim.receiveShadow = true;
     scene.add(this.islandRim);
 
-    // Soft Contact Shadow Plane underneath
-    const shadowGeo = new THREE.PlaneGeometry(24, 24);
+    // Soft Radial Contact Shadow Plane
+    const shadowGeo = new THREE.PlaneGeometry(22, 22);
     const shadowMat = new THREE.MeshBasicMaterial({
       color: 0x000000,
       transparent: true,
-      opacity: 0.45,
+      opacity: 0.4,
       depthWrite: false,
     });
     this.shadowPlane = new THREE.Mesh(shadowGeo, shadowMat);
@@ -109,7 +116,6 @@ export class FarmRenderer {
     const accentColor = new THREE.Color(farm.accentColor);
     this.rimLight.color.copy(accentColor).lerp(new THREE.Color(0xffffff), 0.5);
 
-    // Ground color palette reflecting specific agro-ecological zone
     const groundColors: Record<string, number> = {
       'rainforest': 0x14532d,
       'derived-savanna': 0x3f6212,
@@ -119,7 +125,7 @@ export class FarmRenderer {
     };
 
     const gc = groundColors[farm.biome] || 0x15803d;
-    (this.islandMesh.material as THREE.MeshStandardMaterial).color.setHex(
+    (this.islandMesh.material as THREE.MeshPhysicalMaterial).color.setHex(
       isWet ? gc : this.lightenHex(gc, 0.3)
     );
   }
@@ -127,16 +133,15 @@ export class FarmRenderer {
   setSeason(season: Season) {
     this.currentSeason = season;
     if (season === 'wet') {
-      this.fillLight.color.setHex(0x38bdf8);
+      this.fillLight.color.setHex(0xbae6fd);
       this.sunLight.color.setHex(0xfff7ed);
-      this.sunLight.intensity = 2.8;
-      (this.islandMesh.material as THREE.MeshStandardMaterial).color.setHex(0x15803d);
+      this.sunLight.intensity = 3.0;
+      (this.islandMesh.material as THREE.MeshPhysicalMaterial).color.setHex(0x15803d);
     } else {
-      // Harmattan — warm golden dusty glow
       this.fillLight.color.setHex(0xfde047);
       this.sunLight.color.setHex(0xfef08a);
-      this.sunLight.intensity = 3.2;
-      (this.islandMesh.material as THREE.MeshStandardMaterial).color.setHex(0x78350f);
+      this.sunLight.intensity = 3.4;
+      (this.islandMesh.material as THREE.MeshPhysicalMaterial).color.setHex(0x78350f);
     }
   }
 
@@ -153,17 +158,17 @@ export class FarmRenderer {
     this.sunLight.position.set(x, Math.max(y, 1), z);
 
     if (hour < 7 || hour > 18) {
-      this.sunLight.color.setHex(0xf97316); // dawn/dusk deep orange
-      this.sunLight.intensity = 0.8;
-      this.ambientLight.intensity = 0.2;
+      this.sunLight.color.setHex(0xf97316);
+      this.sunLight.intensity = 0.9;
+      this.ambientLight.intensity = 0.25;
     } else if (hour < 9 || hour > 16) {
-      this.sunLight.color.setHex(0xfbbf24); // golden hour
-      this.sunLight.intensity = 2.0;
-      this.ambientLight.intensity = 0.3;
-    } else {
-      this.sunLight.color.setHex(0xfff7ed); // bright tropical sun
-      this.sunLight.intensity = 2.8;
+      this.sunLight.color.setHex(0xfbbf24);
+      this.sunLight.intensity = 2.2;
       this.ambientLight.intensity = 0.35;
+    } else {
+      this.sunLight.color.setHex(0xfff7ed);
+      this.sunLight.intensity = 3.0;
+      this.ambientLight.intensity = 0.4;
     }
   }
 
@@ -173,18 +178,18 @@ export class FarmRenderer {
       this.scene.background = new THREE.Color(0x060c08);
       this.fillLight.color.setHex(0x064e3b);
       this.fillLight.groundColor.setHex(0x022c22);
-      this.fillLight.intensity = 0.7;
-      this.ambientLight.intensity = 0.25;
+      this.fillLight.intensity = 0.75;
+      this.ambientLight.intensity = 0.3;
       this.renderer.toneMappingExposure = 1.15;
-      (this.shadowPlane.material as THREE.MeshBasicMaterial).opacity = 0.6;
+      (this.shadowPlane.material as THREE.MeshBasicMaterial).opacity = 0.55;
     } else {
-      this.scene.background = new THREE.Color(0xf4eee2);
-      this.fillLight.color.setHex(0x38bdf8);
+      this.scene.background = new THREE.Color(0xf6f2e8); // exact Seed Atlas warm paper ground
+      this.fillLight.color.setHex(0xbae6fd);
       this.fillLight.groundColor.setHex(0x166534);
-      this.fillLight.intensity = 0.95;
-      this.ambientLight.intensity = 0.45;
-      this.renderer.toneMappingExposure = 0.95;
-      (this.shadowPlane.material as THREE.MeshBasicMaterial).opacity = 0.2;
+      this.fillLight.intensity = 1.0;
+      this.ambientLight.intensity = 0.5;
+      this.renderer.toneMappingExposure = 1.0;
+      (this.shadowPlane.material as THREE.MeshBasicMaterial).opacity = 0.22;
     }
   }
 

@@ -11,6 +11,8 @@ import { FarmRenderer } from './FarmRenderer';
 import { FarmBuilder } from './FarmBuilder';
 import { ParticleCycles } from './ParticleCycles';
 import { HotspotManager } from './HotspotManager';
+import { BoidsSimulation } from './BoidsSimulation';
+import { updateWindUniforms } from './WindShader';
 import type { FarmEcosystem, ViewState, Season } from '../data/types';
 
 interface SceneCallbacks {
@@ -28,6 +30,7 @@ export class FarmScene {
   private farmBuilder: FarmBuilder;
   private particleCycles: ParticleCycles;
   private hotspotManager: HotspotManager;
+  private boidsSimulation: BoidsSimulation;
   private callbacks: SceneCallbacks;
   private animationId: number | null = null;
   private lastTime = performance.now();
@@ -85,6 +88,7 @@ export class FarmScene {
       this.renderer,
       (id) => callbacks.onHotspotClick(id)
     );
+    this.boidsSimulation = new BoidsSimulation(this.scene, 16);
 
     canvas.addEventListener('click', (e) => this.hotspotManager.handleClick(e));
 
@@ -200,13 +204,15 @@ export class FarmScene {
 
       this.controls.update();
       this.particleCycles.update(delta);
+      this.boidsSimulation.update(delta);
+      updateWindUniforms(this.scene, this.elapsedTime);
 
-      // Subtle living wind sway on vegetation & gentle fauna animation
+      // Living wind sway on vegetation & fauna animation
       this.scene.traverse((obj) => {
         if (obj.userData.swayable) {
           const phase = (obj.userData.swayPhase || 0) + this.elapsedTime * 1.6;
-          obj.rotation.z = Math.sin(phase) * 0.03;
-          obj.rotation.x = Math.cos(phase * 0.8) * 0.02;
+          obj.rotation.z = Math.sin(phase) * 0.025;
+          obj.rotation.x = Math.cos(phase * 0.8) * 0.018;
         }
         if (obj.userData.animType === 'chicken') {
           const animPhase = (obj.userData.animOffset || 0) + this.elapsedTime * 3.0;
@@ -238,6 +244,7 @@ export class FarmScene {
     this.controls.dispose();
     this.farmBuilder.dispose();
     this.particleCycles.dispose();
+    this.boidsSimulation.dispose();
     this.renderer.dispose();
   }
 }
