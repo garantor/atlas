@@ -1,121 +1,144 @@
 /*
  * Farm Atlas — Design Tokens
  * Complete dual light/dark mode token system
+ * Inspired by Seed Atlas & modern luxury botanical editorial aesthetics
  */
 
 /* ─── Fonts ─────────────────────────────────────────────────────────────────── */
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
-/* ─── Dark Mode (default) ─────────────────────────────────────────────────── */
+/* ─── Dark Mode (default — Emerald Night & Bioluminescence) ───────────────── */
 :root, [data-theme="dark"] {
   /* Surfaces */
-  --bg:              #0a100c;
-  --surface:         #0f1a12;
-  --surface-raised:  #152017;
-  --surface-sunk:    #080e0a;
-  --surface-viewer:  #06100a;
-  --glass:           rgba(10, 24, 14, 0.75);
-  --glass-border:    rgba(76, 175, 80, 0.15);
+  --bg:              #060c08;
+  --bg-radial:       radial-gradient(ellipse 80% 60% at 50% 0%, #0d2116 0%, #060c08 100%);
+  --surface:         #0c1710;
+  --surface-raised:  #122218;
+  --surface-hover:   #182d20;
+  --surface-sunk:    #070f0a;
+  --surface-viewer:  #050a07;
+  --glass:           rgba(12, 23, 16, 0.78);
+  --glass-raised:    rgba(18, 34, 24, 0.85);
+  --glass-border:    rgba(52, 211, 153, 0.15);
+  --glass-border-subtle: rgba(255, 255, 255, 0.06);
 
   /* Ink */
-  --ink:             #c8d8cc;
-  --ink-strong:      #e8f2ea;
-  --muted:           #7a9a80;
-  --muted-soft:      #4d6b52;
+  --ink:             #d1fae5;
+  --ink-strong:      #ffffff;
+  --ink-body:        #94a3b8;
+  --muted:           #6ee7b7;
+  --muted-dark:      #059669;
+  --muted-soft:      #4b6354;
+  --muted-faint:     rgba(110, 231, 183, 0.12);
 
   /* Borders */
-  --border:          rgba(76, 175, 80, 0.12);
-  --border-strong:   rgba(76, 175, 80, 0.25);
+  --border:          rgba(52, 211, 153, 0.12);
+  --border-strong:   rgba(52, 211, 153, 0.28);
+  --border-highlight: rgba(255, 255, 255, 0.12);
 
   /* Greens */
-  --green-primary:   #2e7d32;
-  --green-mid:       #4caf50;
-  --green-light:     #81c784;
-  --green-muted:     rgba(76, 175, 80, 0.35);
-  --green-wash:      rgba(76, 175, 80, 0.07);
+  --green-primary:   #10b981;
+  --green-mid:       #059669;
+  --green-light:     #34d399;
+  --green-glow:      rgba(16, 185, 129, 0.35);
+  --green-muted:     rgba(52, 211, 153, 0.3);
+  --green-wash:      rgba(16, 185, 129, 0.08);
 
   /* Gold / Harvest */
-  --harvest-gold:    #f5a623;
-  --harvest-light:   #ffd54f;
+  --harvest-gold:    #f59e0b;
+  --harvest-light:   #fbbf24;
+  --harvest-glow:    rgba(245, 158, 11, 0.35);
 
   /* Status */
-  --status-good:     #66bb6a;
-  --status-warn:     #ef6c00;
-  --status-bad:      #ef5350;
+  --status-good:     #34d399;
+  --status-warn:     #fbbf24;
+  --status-bad:      #f87171;
 
   /* Particle colours */
-  --particle-water:  #4fc3f7;
-  --particle-n2:     #69f0ae;
-  --particle-par:    #ffee58;
-  --particle-pest:   #ce93d8;
+  --particle-water:  #38bdf8;
+  --particle-n2:     #4ade80;
+  --particle-par:    #fde047;
+  --particle-pest:   #e879f9;
 
   /* Shadows */
-  --shadow-sm:     0 1px 3px rgba(0,0,0,0.5);
-  --shadow-card:   0 4px 12px rgba(0,0,0,0.45), 0 1px 3px rgba(0,0,0,0.3);
-  --shadow-raised: 0 8px 24px rgba(0,0,0,0.55), 0 2px 6px rgba(0,0,0,0.4);
-  --shadow-float:  0 16px 48px rgba(0,0,0,0.6);
-  --shadow-modal:  0 24px 80px rgba(0,0,0,0.7);
+  --shadow-sm:     0 2px 4px rgba(0, 0, 0, 0.4);
+  --shadow-card:   0 4px 20px rgba(0, 0, 0, 0.5), 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-raised: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 1px 1px rgba(52, 211, 153, 0.1);
+  --shadow-float:  0 20px 50px rgba(0, 0, 0, 0.7), 0 0 20px rgba(16, 185, 129, 0.15);
+  --shadow-modal:  0 25px 80px rgba(0, 0, 0, 0.85), 0 0 1px 1px rgba(52, 211, 153, 0.2);
+  --inner-glow:    inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
-/* ─── Light Mode ─────────────────────────────────────────────────────────────── */
+/* ─── Light Mode (Warm Botanical Paper & Deep Forest Ink) ─────────────────── */
 [data-theme="light"] {
   /* Surfaces */
-  --bg:              #f4f0e6;
-  --surface:         #faf7f0;
-  --surface-raised:  #ffffff;
-  --surface-sunk:    #ece8de;
-  --surface-viewer:  #e8f5e9;
-  --glass:           rgba(250, 247, 240, 0.85);
-  --glass-border:    rgba(46, 125, 50, 0.18);
+  --bg:              #fbf9f4;
+  --bg-radial:       radial-gradient(ellipse 80% 60% at 50% 0%, #f4eee2 0%, #fbf9f4 100%);
+  --surface:         #ffffff;
+  --surface-raised:  #fdfcf9;
+  --surface-hover:   #f5efe4;
+  --surface-sunk:    #f0ebdE;
+  --surface-viewer:  #f4f1ea;
+  --glass:           rgba(255, 255, 255, 0.85);
+  --glass-raised:    rgba(253, 252, 249, 0.92);
+  --glass-border:    rgba(22, 101, 52, 0.14);
+  --glass-border-subtle: rgba(0, 0, 0, 0.05);
 
   /* Ink */
-  --ink:             #2a3a2c;
-  --ink-strong:      #1a2a1c;
-  --muted:           #5a7a5c;
-  --muted-soft:      #8aa88c;
+  --ink:             #164e2e;
+  --ink-strong:      #0b2917;
+  --ink-body:        #475569;
+  --muted:           #2d6a4f;
+  --muted-dark:      #1b4332;
+  --muted-soft:      #748c7c;
+  --muted-faint:     rgba(45, 106, 79, 0.08);
 
   /* Borders */
-  --border:          rgba(46, 125, 50, 0.14);
-  --border-strong:   rgba(46, 125, 50, 0.28);
+  --border:          rgba(22, 101, 52, 0.12);
+  --border-strong:   rgba(22, 101, 52, 0.24);
+  --border-highlight: rgba(255, 255, 255, 0.8);
 
   /* Greens */
-  --green-primary:   #2e7d32;
-  --green-mid:       #388e3c;
-  --green-light:     #4caf50;
-  --green-muted:     rgba(46, 125, 50, 0.3);
-  --green-wash:      rgba(46, 125, 50, 0.06);
+  --green-primary:   #166534;
+  --green-mid:       #15803d;
+  --green-light:     #22c55e;
+  --green-glow:      rgba(22, 101, 52, 0.25);
+  --green-muted:     rgba(22, 101, 52, 0.25);
+  --green-wash:      rgba(22, 101, 52, 0.06);
 
   /* Gold / Harvest */
-  --harvest-gold:    #d4820a;
-  --harvest-light:   #f5a623;
+  --harvest-gold:    #d97706;
+  --harvest-light:   #f59e0b;
+  --harvest-glow:    rgba(217, 119, 6, 0.25);
 
   /* Status */
-  --status-good:     #2e7d32;
-  --status-warn:     #e65100;
-  --status-bad:      #c62828;
+  --status-good:     #15803d;
+  --status-warn:     #b45309;
+  --status-bad:      #b91c1c;
 
   /* Particle colours */
-  --particle-water:  #1e88e5;
-  --particle-n2:     #2e7d32;
-  --particle-par:    #f9a825;
-  --particle-pest:   #7b1fa2;
+  --particle-water:  #0284c7;
+  --particle-n2:     #16a34a;
+  --particle-par:    #ca8a04;
+  --particle-pest:   #9333ea;
 
   /* Shadows */
-  --shadow-sm:     0 1px 3px rgba(0,0,0,0.10);
-  --shadow-card:   0 2px 8px rgba(0,0,0,0.10), 0 1px 2px rgba(0,0,0,0.06);
-  --shadow-raised: 0 4px 16px rgba(0,0,0,0.14), 0 1px 4px rgba(0,0,0,0.08);
-  --shadow-float:  0 8px 32px rgba(0,0,0,0.18);
-  --shadow-modal:  0 16px 64px rgba(0,0,0,0.28);
+  --shadow-sm:     0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-card:   0 4px 16px rgba(15, 23, 42, 0.06), 0 1px 3px rgba(15, 23, 42, 0.04);
+  --shadow-raised: 0 10px 25px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(15, 23, 42, 0.04);
+  --shadow-float:  0 20px 40px rgba(15, 23, 42, 0.12), 0 0 1px rgba(0, 0, 0, 0.05);
+  --shadow-modal:  0 25px 60px rgba(15, 23, 42, 0.2), 0 0 1px rgba(0, 0, 0, 0.1);
+  --inner-glow:    inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 
-/* ─── Invariant (both modes) ─────────────────────────────────────────────── */
+/* ─── Global Invariants ─────────────────────────────────────────────────── */
 :root {
   /* Typography */
   --font-serif:  'Playfair Display', Georgia, serif;
-  --font-sans:   'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-mono:   'JetBrains Mono', 'Fira Code', monospace;
+  --font-sans:   'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono:   'JetBrains Mono', monospace;
 
-  /* Spacing scale (4pt grid) */
+  /* Spacing scale */
   --space-1:  4px;
   --space-2:  8px;
   --space-3:  12px;
@@ -127,23 +150,23 @@
   --space-12: 48px;
 
   /* Border radii */
-  --r-xs:   3px;
-  --r-sm:   6px;
-  --r-md:   10px;
-  --r-lg:   14px;
-  --r-xl:   20px;
-  --r-2xl:  28px;
+  --r-xs:   4px;
+  --r-sm:   8px;
+  --r-md:   12px;
+  --r-lg:   16px;
+  --r-xl:   22px;
+  --r-2xl:  30px;
   --r-full: 9999px;
 
   /* Transitions */
-  --dur-fast: 120ms;
-  --dur-mid:  240ms;
-  --dur-slow: 380ms;
-  --ease-out:    cubic-bezier(0.0, 0, 0.2, 1);
-  --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --dur-fast: 140ms;
+  --dur-mid:  260ms;
+  --dur-slow: 420ms;
+  --ease-out:    cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-bounce: cubic-bezier(0.34, 1.4, 0.64, 1);
 
-  /* Layout */
-  --header-h:  56px;
-  --sidebar-w: 240px;
-  --detail-w:  320px;
+  /* Layout Dimensions */
+  --header-h:  60px;
+  --sidebar-w: 280px;
+  --detail-w:  360px;
 }

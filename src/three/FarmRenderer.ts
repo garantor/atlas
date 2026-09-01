@@ -1,6 +1,6 @@
 /**
  * Farm Atlas — FarmRenderer
- * Lighting rig, sky, environment, tone mapping, season/time control
+ * Lighting rig, floating diorama pedestal, sky atmosphere, season/time control
  */
 
 import * as THREE from 'three';
@@ -16,11 +16,10 @@ export class FarmRenderer {
   private fillLight: THREE.HemisphereLight;
   private rimLight: THREE.DirectionalLight;
 
-  // Sky plane
-  private skyMesh: THREE.Mesh | null = null;
-
-  // Ground plane
-  private groundMesh: THREE.Mesh;
+  // Stylized Diorama Pedestal Plot
+  private islandMesh: THREE.Mesh;
+  private islandRim: THREE.Mesh;
+  private shadowPlane: THREE.Mesh;
 
   private currentSeason: Season = 'wet';
   private currentHour = 10;
@@ -30,48 +29,74 @@ export class FarmRenderer {
     this.scene = scene;
     this.renderer = renderer;
 
-    // ─── Sun / Key Light ─────────────────────────────────────────────────────
-    this.sunLight = new THREE.DirectionalLight(0xfff5e0, 2.5);
-    this.sunLight.position.set(10, 18, 8);
+    // ─── Sun / Key Light with Soft Shadows ───────────────────────────────────
+    this.sunLight = new THREE.DirectionalLight(0xfff7ed, 2.8);
+    this.sunLight.position.set(12, 18, 10);
     this.sunLight.castShadow = true;
     this.sunLight.shadow.mapSize.set(2048, 2048);
     this.sunLight.shadow.camera.near = 0.5;
-    this.sunLight.shadow.camera.far = 80;
-    this.sunLight.shadow.camera.left = -20;
-    this.sunLight.shadow.camera.right = 20;
-    this.sunLight.shadow.camera.top = 20;
-    this.sunLight.shadow.camera.bottom = -20;
-    this.sunLight.shadow.bias = -0.001;
-    this.sunLight.shadow.radius = 3;
+    this.sunLight.shadow.camera.far = 60;
+    this.sunLight.shadow.camera.left = -16;
+    this.sunLight.shadow.camera.right = 16;
+    this.sunLight.shadow.camera.top = 16;
+    this.sunLight.shadow.camera.bottom = -16;
+    this.sunLight.shadow.bias = -0.0005;
+    this.sunLight.shadow.radius = 2.5;
     scene.add(this.sunLight);
 
-    // ─── Ambient / Sky ────────────────────────────────────────────────────────
+    // ─── Sky / Fill Bounce Light ─────────────────────────────────────────────
     this.fillLight = new THREE.HemisphereLight(
-      0x87ceeb,  // sky blue
-      0x4a7c59,  // ground green
-      0.8
+      0x38bdf8,  // sky blue
+      0x166534,  // ground forest green
+      0.9
     );
     scene.add(this.fillLight);
 
-    this.ambientLight = new THREE.AmbientLight(0xffffff, 0.2);
+    this.ambientLight = new THREE.AmbientLight(0xffffff, 0.35);
     scene.add(this.ambientLight);
 
-    // ─── Rim Light ────────────────────────────────────────────────────────────
-    this.rimLight = new THREE.DirectionalLight(0xfff3cc, 0.6);
-    this.rimLight.position.set(-8, 8, -10);
+    // ─── Rim Light (Warm Golden / Emerald Accent) ────────────────────────────
+    this.rimLight = new THREE.DirectionalLight(0xfef08a, 0.8);
+    this.rimLight.position.set(-10, 12, -12);
     scene.add(this.rimLight);
 
-    // ─── Ground Plane ─────────────────────────────────────────────────────────
-    const groundGeo = new THREE.PlaneGeometry(60, 60, 32, 32);
-    const groundMat = new THREE.MeshStandardMaterial({
-      color: 0x3a6b3a,
-      roughness: 0.95,
-      metalness: 0,
+    // ─── Stylized Floating Diorama Pedestal ───────────────────────────────────
+    // Top organic grass surface
+    const islandGeo = new THREE.CylinderGeometry(8.2, 8.4, 0.6, 64);
+    const islandMat = new THREE.MeshStandardMaterial({
+      color: 0x15803d,
+      roughness: 0.85,
+      metalness: 0.05,
     });
-    this.groundMesh = new THREE.Mesh(groundGeo, groundMat);
-    this.groundMesh.rotation.x = -Math.PI / 2;
-    this.groundMesh.receiveShadow = true;
-    scene.add(this.groundMesh);
+    this.islandMesh = new THREE.Mesh(islandGeo, islandMat);
+    this.islandMesh.position.y = -0.3;
+    this.islandMesh.receiveShadow = true;
+    scene.add(this.islandMesh);
+
+    // Stratified soil bedrock rim
+    const rimGeo = new THREE.CylinderGeometry(8.4, 7.6, 1.2, 64);
+    const rimMat = new THREE.MeshStandardMaterial({
+      color: 0x451a03,
+      roughness: 0.95,
+      metalness: 0.0,
+    });
+    this.islandRim = new THREE.Mesh(rimGeo, rimMat);
+    this.islandRim.position.y = -1.1;
+    this.islandRim.receiveShadow = true;
+    scene.add(this.islandRim);
+
+    // Soft Contact Shadow Plane underneath
+    const shadowGeo = new THREE.PlaneGeometry(24, 24);
+    const shadowMat = new THREE.MeshBasicMaterial({
+      color: 0x000000,
+      transparent: true,
+      opacity: 0.45,
+      depthWrite: false,
+    });
+    this.shadowPlane = new THREE.Mesh(shadowGeo, shadowMat);
+    this.shadowPlane.rotation.x = -Math.PI / 2;
+    this.shadowPlane.position.y = -1.72;
+    scene.add(this.shadowPlane);
 
     this.setTheme('dark');
     this.setTimeOfDay(10);
@@ -81,84 +106,85 @@ export class FarmRenderer {
     this.currentTheme = theme;
     const isWet = this.currentSeason === 'wet';
 
-    // Accent the scene based on the farm's palette
     const accentColor = new THREE.Color(farm.accentColor);
-    this.rimLight.color.copy(accentColor).lerp(new THREE.Color(0xffffff), 0.6);
+    this.rimLight.color.copy(accentColor).lerp(new THREE.Color(0xffffff), 0.5);
 
-    // Ground colour reflects biome
+    // Ground color palette reflecting specific agro-ecological zone
     const groundColors: Record<string, number> = {
-      'rainforest': 0x2d5a27,
-      'derived-savanna': 0x5a6b3a,
-      'guinea-savanna': 0x8b7355,
-      'swamp-forest': 0x1a4030,
-      'aquatic': 0x1a3a5c,
+      'rainforest': 0x14532d,
+      'derived-savanna': 0x3f6212,
+      'guinea-savanna': 0x854d0e,
+      'swamp-forest': 0x064e3b,
+      'aquatic': 0x0369a1,
     };
 
-    const gc = groundColors[farm.biome] || 0x3a6b3a;
-    (this.groundMesh.material as THREE.MeshStandardMaterial).color.setHex(
-      isWet ? gc : this.lightenHex(gc, 0.35)
+    const gc = groundColors[farm.biome] || 0x15803d;
+    (this.islandMesh.material as THREE.MeshStandardMaterial).color.setHex(
+      isWet ? gc : this.lightenHex(gc, 0.3)
     );
   }
 
   setSeason(season: Season) {
     this.currentSeason = season;
     if (season === 'wet') {
-      this.fillLight.color.setHex(0x6baed6);
-      this.sunLight.intensity = 2.2;
-      (this.groundMesh.material as THREE.MeshStandardMaterial).color.setHex(0x2d5a27);
-    } else {
-      // Harmattan — golden dusty
-      this.fillLight.color.setHex(0xc8a870);
-      this.sunLight.color.setHex(0xffddaa);
+      this.fillLight.color.setHex(0x38bdf8);
+      this.sunLight.color.setHex(0xfff7ed);
       this.sunLight.intensity = 2.8;
-      (this.groundMesh.material as THREE.MeshStandardMaterial).color.setHex(0x8b7a5a);
+      (this.islandMesh.material as THREE.MeshStandardMaterial).color.setHex(0x15803d);
+    } else {
+      // Harmattan — warm golden dusty glow
+      this.fillLight.color.setHex(0xfde047);
+      this.sunLight.color.setHex(0xfef08a);
+      this.sunLight.intensity = 3.2;
+      (this.islandMesh.material as THREE.MeshStandardMaterial).color.setHex(0x78350f);
     }
   }
 
   setTimeOfDay(hour: number) {
     this.currentHour = hour;
 
-    // Sun arc: angle 0–180° for hours 6–18
     const t = (hour - 6) / 12;
     const angle = t * Math.PI;
 
-    const x = Math.cos(angle - Math.PI / 2) * 18;
-    const y = Math.sin(angle) * 18 + 2;
-    const z = 8;
+    const x = Math.cos(angle - Math.PI / 2) * 20;
+    const y = Math.sin(angle) * 20 + 3;
+    const z = 10;
 
-    this.sunLight.position.set(x, Math.max(y, 0.5), z);
+    this.sunLight.position.set(x, Math.max(y, 1), z);
 
-    // Colour temperature
     if (hour < 7 || hour > 18) {
-      this.sunLight.color.setHex(0xff6030); // dawn/dusk red
-      this.sunLight.intensity = 0.5;
-      this.ambientLight.intensity = 0.1;
-    } else if (hour < 9 || hour > 17) {
-      this.sunLight.color.setHex(0xffb040); // golden hour
-      this.sunLight.intensity = 1.5;
-    } else {
-      this.sunLight.color.setHex(0xfff5e0); // midday
-      this.sunLight.intensity = 2.5;
+      this.sunLight.color.setHex(0xf97316); // dawn/dusk deep orange
+      this.sunLight.intensity = 0.8;
       this.ambientLight.intensity = 0.2;
+    } else if (hour < 9 || hour > 16) {
+      this.sunLight.color.setHex(0xfbbf24); // golden hour
+      this.sunLight.intensity = 2.0;
+      this.ambientLight.intensity = 0.3;
+    } else {
+      this.sunLight.color.setHex(0xfff7ed); // bright tropical sun
+      this.sunLight.intensity = 2.8;
+      this.ambientLight.intensity = 0.35;
     }
   }
 
   setTheme(theme: 'light' | 'dark') {
     this.currentTheme = theme;
     if (theme === 'dark') {
-      this.scene.background = new THREE.Color(0x0a1208);
-      this.fillLight.color.setHex(0x1a3320);
-      this.fillLight.groundColor.setHex(0x0d1a10);
-      this.fillLight.intensity = 0.5;
-      this.ambientLight.intensity = 0.15;
-      this.renderer.toneMappingExposure = 1.1;
+      this.scene.background = new THREE.Color(0x060c08);
+      this.fillLight.color.setHex(0x064e3b);
+      this.fillLight.groundColor.setHex(0x022c22);
+      this.fillLight.intensity = 0.7;
+      this.ambientLight.intensity = 0.25;
+      this.renderer.toneMappingExposure = 1.15;
+      (this.shadowPlane.material as THREE.MeshBasicMaterial).opacity = 0.6;
     } else {
-      this.scene.background = new THREE.Color(0xd8ecd4);
-      this.fillLight.color.setHex(0x87ceeb);
-      this.fillLight.groundColor.setHex(0x5a8f5a);
-      this.fillLight.intensity = 0.8;
-      this.ambientLight.intensity = 0.3;
-      this.renderer.toneMappingExposure = 0.9;
+      this.scene.background = new THREE.Color(0xf4eee2);
+      this.fillLight.color.setHex(0x38bdf8);
+      this.fillLight.groundColor.setHex(0x166534);
+      this.fillLight.intensity = 0.95;
+      this.ambientLight.intensity = 0.45;
+      this.renderer.toneMappingExposure = 0.95;
+      (this.shadowPlane.material as THREE.MeshBasicMaterial).opacity = 0.2;
     }
   }
 

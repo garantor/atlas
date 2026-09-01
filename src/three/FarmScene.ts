@@ -1,7 +1,7 @@
 /**
  * Farm Atlas — Three.js Farm Scene Manager
- * Owns the render loop, GSAP camera transitions, resize handling,
- * and coordinates the renderer, builder, and hotspot manager.
+ * Render loop with procedural wind sway, GSAP camera animations,
+ * dynamic shadows, and screen-space hotspot projections.
  */
 
 import * as THREE from 'three';
@@ -30,8 +30,8 @@ export class FarmScene {
   private hotspotManager: HotspotManager;
   private callbacks: SceneCallbacks;
   private animationId: number | null = null;
-  private dirty = true;
-  private clock = new THREE.Clock();
+  private lastTime = performance.now();
+  private elapsedTime = 0;
   private currentFarmId: string | null = null;
   private currentViewState: ViewState = 'macro';
 
@@ -48,33 +48,32 @@ export class FarmScene {
     });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.shadowMap.type = THREE.PCFShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.1;
+    this.renderer.toneMappingExposure = 1.15;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
 
-    // ─── Scene ───────────────────────────────────────────────────────────────
+    // ─── Scene & Atmosphere ──────────────────────────────────────────────────
     this.scene = new THREE.Scene();
-    this.scene.fog = new THREE.FogExp2(0x111f14, 0.018);
+    this.scene.fog = new THREE.FogExp2(0x060c08, 0.015);
 
     // ─── Camera ──────────────────────────────────────────────────────────────
     this.camera = new THREE.PerspectiveCamera(
-      45,
+      42,
       canvas.clientWidth / canvas.clientHeight,
       0.1,
       200
     );
-    this.camera.position.set(8, 6, 10);
+    this.camera.position.set(9, 7, 11);
 
-    // ─── Controls ────────────────────────────────────────────────────────────
+    // ─── Orbit Controls ──────────────────────────────────────────────────────
     this.controls = new OrbitControls(this.camera, canvas);
     this.controls.enableDamping = true;
     this.controls.dampingFactor = 0.06;
-    this.controls.maxPolarAngle = Math.PI / 2.1;
-    this.controls.minDistance = 2;
-    this.controls.maxDistance = 40;
-    this.controls.target.set(0, 1, 0);
-    this.controls.addEventListener('change', () => { this.dirty = true; });
+    this.controls.maxPolarAngle = Math.PI / 2.15;
+    this.controls.minDistance = 3;
+    this.controls.maxDistance = 35;
+    this.controls.target.set(0, 0.5, 0);
 
     // ─── Sub-systems ─────────────────────────────────────────────────────────
     this.farmRenderer = new FarmRenderer(this.scene, this.renderer);
@@ -87,7 +86,6 @@ export class FarmScene {
       (id) => callbacks.onHotspotClick(id)
     );
 
-    // Attach canvas click → hotspot raycasting
     canvas.addEventListener('click', (e) => this.hotspotManager.handleClick(e));
 
     this.resize();
@@ -101,31 +99,20 @@ export class FarmScene {
     if (this.currentFarmId === farm.id) return;
     this.currentFarmId = farm.id;
 
-    // Clear previous farm geometry
     this.farmBuilder.clear();
     this.hotspotManager.clear();
     this.particleCycles.clear();
 
-    // Build new farm geometry
     this.farmBuilder.build(farm);
-
-    // Set up hotspot markers
     this.hotspotManager.loadHotspots(farm.hotspots);
-
-    // Set up particle flows
     this.particleCycles.buildFlows(farm);
-
-    // Update environment for this farm
     this.farmRenderer.setFarmEnvironment(farm, theme);
 
-    // Animate camera to overview position
     this.flyToPreset('overview');
-
-    this.dirty = true;
   }
 
   /** Switch view state with GSAP camera animation */
-  setViewState(viewState: ViewState, theme: 'light' | 'dark') {
+  setViewState(viewState: ViewState, _theme: 'light' | 'dark') {
     if (this.currentViewState === viewState) return;
     this.currentViewState = viewState;
 
@@ -143,84 +130,84 @@ export class FarmScene {
         this.flyToPreset('cycles');
         break;
     }
-
-    this.dirty = true;
   }
 
   /** Fly camera to a named preset */
   flyToPreset(preset: string) {
     const presets: Record<string, { pos: THREE.Vector3; target: THREE.Vector3 }> = {
-      'overview':     { pos: new THREE.Vector3(8, 6, 10),  target: new THREE.Vector3(0, 1, 0) },
-      'subterranean': { pos: new THREE.Vector3(4, -2, 8),  target: new THREE.Vector3(0, -1, 0) },
-      'cycles':       { pos: new THREE.Vector3(6, 5, 8),   target: new THREE.Vector3(0, 1.5, 0) },
-      'top-down':     { pos: new THREE.Vector3(0, 14, 0.1), target: new THREE.Vector3(0, 0, 0) },
-      'cocoa-closeup':{ pos: new THREE.Vector3(2, 2, 4),   target: new THREE.Vector3(0, 1.2, 0) },
-      'ground-layer': { pos: new THREE.Vector3(3, 1, 5),   target: new THREE.Vector3(0, 0.2, 0) },
+      'overview':     { pos: new THREE.Vector3(9, 7, 11),   target: new THREE.Vector3(0, 0.6, 0) },
+      'subterranean': { pos: new THREE.Vector3(5, -1.8, 9), target: new THREE.Vector3(0, -0.9, 0) },
+      'cycles':       { pos: new THREE.Vector3(7, 5.5, 9),  target: new THREE.Vector3(0, 1.2, 0) },
+      'top-down':     { pos: new THREE.Vector3(0, 15, 0.1), target: new THREE.Vector3(0, 0, 0) },
+      'cocoa-closeup':{ pos: new THREE.Vector3(2.5, 2.2, 4.5), target: new THREE.Vector3(0, 1.2, 0) },
+      'ground-layer': { pos: new THREE.Vector3(4, 1.2, 5.5),   target: new THREE.Vector3(0, 0.3, 0) },
     };
 
     const p = presets[preset] || presets['overview'];
 
     gsap.to(this.camera.position, {
       x: p.pos.x, y: p.pos.y, z: p.pos.z,
-      duration: 1.6,
+      duration: 1.5,
       ease: 'power3.inOut',
-      onUpdate: () => { this.dirty = true; },
     });
 
     gsap.to(this.controls.target, {
       x: p.target.x, y: p.target.y, z: p.target.z,
-      duration: 1.6,
+      duration: 1.5,
       ease: 'power3.inOut',
       onUpdate: () => {
         this.controls.update();
-        this.dirty = true;
       },
     });
   }
 
-  /** Update season — triggers environment change */
   setSeason(season: Season) {
     this.farmRenderer.setSeason(season);
-    this.dirty = true;
   }
 
-  /** Update time of day — moves sun */
   setTimeOfDay(hour: number) {
     this.farmRenderer.setTimeOfDay(hour);
-    this.dirty = true;
   }
 
-  /** Update theme */
   setTheme(theme: 'light' | 'dark') {
     this.farmRenderer.setTheme(theme);
-    const fogColor = theme === 'dark' ? 0x111f14 : 0xd8ecd4;
-    this.scene.fog = new THREE.FogExp2(fogColor, 0.018);
-    this.dirty = true;
+    const fogColor = theme === 'dark' ? 0x060c08 : 0xf4eee2;
+    this.scene.fog = new THREE.FogExp2(fogColor, 0.015);
   }
 
-  /** Toggle a scene layer on/off */
   setLayerVisible(layer: string, visible: boolean) {
     this.farmBuilder.setLayerVisible(layer, visible);
-    this.dirty = true;
   }
 
   private startLoop() {
     const loop = () => {
       this.animationId = requestAnimationFrame(loop);
-      const delta = this.clock.getDelta();
+      const now = performance.now();
+      const delta = Math.min((now - this.lastTime) / 1000, 0.1);
+      this.lastTime = now;
+      this.elapsedTime += delta;
 
       this.controls.update();
+      this.particleCycles.update(delta);
 
-      const particlesDirty = this.particleCycles.update(delta);
-      if (particlesDirty) this.dirty = true;
+      // Subtle living wind sway on vegetation & gentle fauna animation
+      this.scene.traverse((obj) => {
+        if (obj.userData.swayable) {
+          const phase = (obj.userData.swayPhase || 0) + this.elapsedTime * 1.6;
+          obj.rotation.z = Math.sin(phase) * 0.03;
+          obj.rotation.x = Math.cos(phase * 0.8) * 0.02;
+        }
+        if (obj.userData.animType === 'chicken') {
+          const animPhase = (obj.userData.animOffset || 0) + this.elapsedTime * 3.0;
+          obj.rotation.x = Math.sin(animPhase) * 0.1;
+        }
+      });
 
-      if (this.dirty) {
-        this.renderer.render(this.scene, this.camera);
-        // Project hotspot positions to screen space
-        const positions = this.hotspotManager.projectAll();
-        this.callbacks.onHotspotPositions(positions);
-        this.dirty = false;
-      }
+      this.renderer.render(this.scene, this.camera);
+
+      // Project hotspots to screen space
+      const positions = this.hotspotManager.projectAll();
+      this.callbacks.onHotspotPositions(positions);
     };
     loop();
   }
@@ -232,7 +219,6 @@ export class FarmScene {
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
-    this.dirty = true;
   }
 
   dispose() {

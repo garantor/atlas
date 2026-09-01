@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAtlas, useSelectedFarm } from '@/state/useAtlas';
 import { FarmScene } from '@/three/FarmScene';
 import { HotspotCallouts } from './HotspotCallouts';
@@ -6,12 +6,19 @@ import { ViewStateSelector } from './ViewStateSelector';
 import '@/styles/viewer.css';
 
 const LAYERS = [
-  { id: 'canopy',     label: 'Canopy',     color: '#2d6a2f' },
-  { id: 'shrub',      label: 'Shrub',      color: '#4caf50' },
-  { id: 'herbaceous', label: 'Crops',      color: '#8db04a' },
-  { id: 'roots',      label: 'Roots',      color: '#8b4513' },
-  { id: 'fauna',      label: 'Fauna',      color: '#f5a623' },
-  { id: 'particles',  label: 'Cycles',     color: '#7b1fa2' },
+  { id: 'canopy',     label: 'Canopy',     color: '#22c55e' },
+  { id: 'shrub',      label: 'Shrub',      color: '#16a34a' },
+  { id: 'herbaceous', label: 'Crops',      color: '#84cc16' },
+  { id: 'roots',      label: 'Roots',      color: '#d97706' },
+  { id: 'fauna',      label: 'Fauna',      color: '#f59e0b' },
+  { id: 'particles',  label: 'Cycles',     color: '#a855f7' },
+] as const;
+
+const CAMERA_PRESETS = [
+  { id: 'overview',     label: 'Overview',   icon: '🎯' },
+  { id: 'ground-layer', label: 'Ground',     icon: '🌿' },
+  { id: 'top-down',     label: 'Top-Down',   icon: '📐' },
+  { id: 'cocoa-closeup',label: 'Close-Up',   icon: '🔍' },
 ] as const;
 
 export function FarmViewer() {
@@ -45,8 +52,7 @@ export function FarmViewer() {
     if (!sceneRef.current || !farm) return;
     setLoading(true);
     sceneRef.current.loadFarm(farm, theme);
-    // Small delay for smooth loading feel
-    setTimeout(() => setLoading(false), 300);
+    setTimeout(() => setLoading(false), 250);
   }, [farm?.id]);
 
   // Sync view state
@@ -90,8 +96,8 @@ export function FarmViewer() {
       {/* Loading overlay */}
       {loading && (
         <div className="viewer-loading" role="status" aria-label="Loading farm">
-          <span className="viewer-loading-icon">🌱</span>
-          <p>Growing the farm ecosystem…</p>
+          <span className="viewer-loading-icon">🌿</span>
+          <p>Generating 3D agro-ecosystem…</p>
         </div>
       )}
 
@@ -110,24 +116,27 @@ export function FarmViewer() {
           >
             <span
               className="layer-chip-dot"
-              style={{ background: layer.color }}
+              style={{ background: layer.color, color: layer.color }}
             />
             {layer.label}
           </button>
         ))}
       </div>
 
-      {/* Floating camera controls (bottom right) */}
-      <div className="viewer-controls">
+      {/* Camera angle presets (bottom right) */}
+      <div className="viewer-controls" aria-label="Camera presets">
         <div className="viewer-controls-row">
-          <button
-            id="camera-reset"
-            className="btn-icon"
-            title="Reset camera"
-            onClick={() => sceneRef.current?.flyToPreset('overview')}
-          >
-            🎯
-          </button>
+          {CAMERA_PRESETS.map(preset => (
+            <button
+              key={preset.id}
+              id={`camera-${preset.id}`}
+              className="btn-icon"
+              title={`${preset.label} view`}
+              onClick={() => sceneRef.current?.flyToPreset(preset.id)}
+            >
+              {preset.icon}
+            </button>
+          ))}
         </div>
       </div>
 
