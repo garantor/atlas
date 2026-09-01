@@ -8,12 +8,8 @@
   background: var(--surface);
   border-right: 1px solid var(--border);
   overflow: hidden;
-  transition: width var(--dur-slow) var(--ease-out);
-}
-
-.farm-library.collapsed {
-  width: 0;
-  border-right-color: transparent;
+  box-shadow: var(--shadow-card);
+  transition: all var(--dur-slow) var(--ease-out);
 }
 
 .library-header {
@@ -26,13 +22,15 @@
 }
 
 .library-header h3 {
-  font-size: 13px;
-  letter-spacing: 0.02em;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
 
 .library-count {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 10px;
+  font-weight: 600;
   color: var(--muted);
   background: var(--surface-sunk);
   padding: 2px 8px;
@@ -46,42 +44,51 @@
   padding: var(--space-3);
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: 8px;
 }
 
 /* ─── Farm Card in Library ─── */
 .farm-card {
-  border-radius: var(--r-md);
+  border-radius: var(--r-lg);
   border: 1px solid var(--border);
   background: var(--surface-raised);
   cursor: pointer;
   overflow: hidden;
-  transition: all var(--dur-mid) var(--ease-out);
+  text-align: left;
+  transition: all var(--dur-fast) var(--ease-out);
   position: relative;
+  box-shadow: var(--shadow-sm);
 }
 
 .farm-card:hover {
   border-color: var(--border-strong);
-  box-shadow: var(--shadow-sm);
-  transform: translateX(2px);
+  background: var(--surface-hover);
+  box-shadow: var(--shadow-card);
+  transform: translateY(-2px);
 }
 
 .farm-card.active {
-  border-color: var(--green-muted);
-  background: var(--green-wash);
-  box-shadow: 0 0 0 2px var(--green-primary);
+  border-color: var(--green-light);
+  background: var(--surface-hover);
+  box-shadow: 0 0 0 1px var(--green-light), 0 8px 24px var(--green-glow);
 }
 
 .farm-card-accent {
   height: 3px;
   width: 100%;
+  transition: height var(--dur-fast) var(--ease-out);
+}
+
+.farm-card:hover .farm-card-accent,
+.farm-card.active .farm-card-accent {
+  height: 4px;
 }
 
 .farm-card-body {
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-4);
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: 8px;
 }
 
 .farm-card-top {
@@ -93,68 +100,67 @@
 
 .farm-card-name {
   font-family: var(--font-serif);
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 700;
   color: var(--ink-strong);
   line-height: 1.3;
 }
 
 .farm-card-biome {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--muted);
   font-weight: 500;
+  margin-top: 2px;
 }
 
 .farm-card-icons {
   display: flex;
   flex-wrap: wrap;
-  gap: 3px;
-  margin: var(--space-1) 0;
+  gap: 4px;
+  margin: 2px 0;
 }
 
 .farm-card-crop-icon {
-  font-size: 16px;
+  font-size: 15px;
   line-height: 1;
-  title: attr(title);
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.2));
 }
 
 .farm-card-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
 }
 
 .farm-card-crops-count {
   font-size: 11px;
-  color: var(--muted-soft);
-}
-
-/* ─── Biome Filter Tabs ─── */
-.library-filter-tabs {
-  display: flex;
-  gap: 2px;
-  padding: var(--space-2) var(--space-3);
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-}
-
-.biome-tab {
-  flex: 1;
-  padding: 5px var(--space-2);
-  border-radius: var(--r-sm);
-  font-size: 11px;
   font-weight: 500;
-  text-align: center;
+  color: var(--ink-body);
+}
+
+/* ─── Biome Tab Buttons ─── */
+.biome-tab {
+  padding: 5px 12px;
+  border-radius: var(--r-full);
+  font-size: 11px;
+  font-weight: 600;
   cursor: pointer;
   border: none;
   background: transparent;
-  color: var(--muted);
+  color: var(--ink-body);
   transition: all var(--dur-fast) var(--ease-out);
   white-space: nowrap;
 }
 
-.biome-tab:hover { background: var(--green-wash); color: var(--green-primary); }
+.biome-tab:hover {
+  color: var(--ink-strong);
+  background: var(--green-wash);
+}
+
 .biome-tab.active {
-  background: var(--green-primary);
-  color: #fff;
+  background: linear-gradient(135deg, var(--green-light), var(--green-primary));
+  color: #ffffff;
+  box-shadow: 0 2px 8px var(--green-glow);
 }

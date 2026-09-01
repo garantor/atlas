@@ -150,6 +150,15 @@ export interface FarmEcosystem {
   highlights: string[];               // 3D view highlights
 }
 
+export interface FarmerAdvisory {
+  id: string;
+  type: 'warning' | 'synergy' | 'management' | 'calendar';
+  title: string;
+  speciesInvolved: string[];
+  description: string;
+  actionableTip: string;
+}
+
 export interface IntercroppingResult {
   ler: number;
   nitrogenDelta: number;              // kg N/ha delta
@@ -159,6 +168,7 @@ export interface IntercroppingResult {
   waterEfficiency: number;            // 0–100%
   compatibilityWarnings: string[];
   synergies: string[];
+  farmerAdvisories: FarmerAdvisory[];
 }
 
 export interface AtlasState {
@@ -168,6 +178,8 @@ export interface AtlasState {
   season: Season;
   timeOfDay: number;                  // 0–24
   theme: 'light' | 'dark';
+  activeDisplayMode: 'farm' | 'sandbox';
+  farmShape: 'square' | 'circle';
   sandboxCropIds: string[];
   sandboxLivestockIds: string[];
   simulationResult: IntercroppingResult;

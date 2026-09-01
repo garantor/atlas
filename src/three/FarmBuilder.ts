@@ -1,37 +1,46 @@
 /**
  * Farm Atlas — FarmBuilder
  * Assembles procedural 3D scenes for each of the 8 farm ecosystems
+ * with dynamic instanced grass ground cover (spacejack/terra) and fractal botanical specimens (Codrops).
+ * Also builds custom user-configured polycultures from the Sandbox!
  */
 
 import * as THREE from 'three';
-import type { FarmEcosystem, ViewState } from '../data/types';
+import type { FarmEcosystem, ViewState, Season } from '../data/types';
 import {
   buildCassava, buildYamMound, buildMaize, buildOilPalm, buildPlantain,
   buildCocoa, buildPineapple, buildShrub, buildTree, buildPaddyWater,
-  buildMoundTerrain
+  buildChicken, buildGoat
 } from './ProceduralVegetation';
+import { buildSculptedSnail } from './SculptedFauna';
 import { buildSubsurface } from './SubsurfaceCrossSection';
+import { InstancedGrass } from './InstancedGrass';
 
-type LayerName = 'canopy' | 'shrub' | 'herbaceous' | 'roots' | 'fauna' | 'particles';
+type LayerName = 'canopy' | 'shrub' | 'herbaceous' | 'roots' | 'fauna' | 'particles' | 'grass';
+
+function randInCircle(radius: number): [number, number] {
+  const angle = Math.random() * Math.PI * 2;
+  const r = Math.sqrt(Math.random()) * radius;
+  return [Math.cos(angle) * r, Math.sin(angle) * r];
+}
 
 export class FarmBuilder {
   private scene: THREE.Scene;
   private farmGroup: THREE.Group | null = null;
   private subsurfaceGroup: THREE.Group | null = null;
   private layers: Map<LayerName, THREE.Group> = new Map();
+  private instancedGrass: InstancedGrass | null = null;
 
   constructor(scene: THREE.Scene) {
     this.scene = scene;
   }
 
-  build(farm: FarmEcosystem) {
+  private initLayers(idName: string, biome = 'rainforest') {
     this.clear();
-
     this.farmGroup = new THREE.Group();
-    this.farmGroup.name = `farm-${farm.id}`;
+    this.farmGroup.name = idName;
 
-    // Initialise layer groups
-    const layerNames: LayerName[] = ['canopy', 'shrub', 'herbaceous', 'roots', 'fauna', 'particles'];
+    const layerNames: LayerName[] = ['canopy', 'shrub', 'herbaceous', 'roots', 'fauna', 'particles', 'grass'];
     layerNames.forEach(name => {
       const g = new THREE.Group();
       g.name = `layer-${name}`;
@@ -39,10 +48,12 @@ export class FarmBuilder {
       this.farmGroup!.add(g);
     });
 
-    // Build the specific farm
-    this.buildFarm(farm);
+    // Add Dynamic Instanced Grass Ground Layer (10,000 blades with GPU wind vertex shader)
+    this.instancedGrass = new InstancedGrass(10000);
+    this.instancedGrass.setBiomePalette(biome);
+    const grassLayer = this.layers.get('grass')!;
+    grassLayer.add(this.instancedGrass.getMesh());
 
-    // Subsurface cross-section (hidden by default)
     this.subsurfaceGroup = buildSubsurface();
     this.subsurfaceGroup.visible = false;
     this.farmGroup.add(this.subsurfaceGroup);
@@ -50,293 +61,412 @@ export class FarmBuilder {
     this.scene.add(this.farmGroup);
   }
 
-  private buildFarm(farm: FarmEcosystem) {
-    const herbaceous = this.layers.get('herbaceous')!;
+  build(farm: FarmEcosystem) {
+    this.initLayers(`farm-${farm.id}`, farm.biome);
+    this.buildFarm(farm);
+  }
+
+  /**
+   * Dynamically build a custom 3D diorama reflecting the exact crops & fauna
+   * configured by the user in the Sandbox!
+   */
+  buildCustom(cropIds: string[], livestockIds: string[]) {
+    this.initLayers('farm-custom-sandbox', 'rainforest');
+
+    const herb = this.layers.get('herbaceous')!;
     const shrub = this.layers.get('shrub')!;
     const canopy = this.layers.get('canopy')!;
+    const fauna = this.layers.get('fauna')!;
+
+    if (cropIds.length === 0 && livestockIds.length === 0) {
+      this.buildGenericFarm(herb, shrub, canopy, fauna);
+      return;
+    }
+
+    // Check presence of specific crops
+    const hasOilPalm = cropIds.includes('oil-palm');
+    const hasCocoa = cropIds.includes('cocoa');
+    const hasPlantain = cropIds.includes('plantain');
+    const hasMango = cropIds.includes('mango');
+    const hasCashew = cropIds.includes('cashew');
+    const hasKola = cropIds.includes('kola-nut');
+    const hasPawpaw = cropIds.includes('pawpaw');
+    const hasMaize = cropIds.includes('maize');
+    const hasYam = cropIds.some(c => c.includes('yam'));
+    const hasCassava = cropIds.includes('cassava');
+    const hasRice = cropIds.includes('ofada-rice');
+    const hasPineapple = cropIds.includes('pineapple');
+    const hasScentOrBitter = cropIds.includes('scent-leaf') || cropIds.includes('bitter-leaf');
+    const hasLegumes = cropIds.some(c => ['cowpea', 'pigeon-pea', 'soybean', 'groundnut', 'bambara-groundnut'].includes(c));
+    const hasVeggies = cropIds.some(c => ['hot-pepper', 'tomato', 'okra', 'egusi', 'pumpkin', 'waterleaf', 'ginger'].includes(c));
+
+    // 1. Emergent / Tree Canopy
+    if (hasOilPalm) {
+      [[-2.8, -2.8], [2.8, -2.8], [0, 3.2]].forEach(([x, z]) => canopy.add(buildOilPalm(x, z)));
+    }
+    if (hasPlantain) {
+      [[-2.2, 2.2], [2.5, 2.0], [0, -3.2]].forEach(([x, z]) => canopy.add(buildPlantain(x, z)));
+    }
+    if (hasCocoa) {
+      [[0, 0], [-1.8, -0.6], [1.8, 0.6], [-0.6, 1.8]].forEach(([x, z]) => shrub.add(buildCocoa(x, z)));
+    }
+    if (hasMango) {
+      [[-2.6, 1.8], [2.6, -1.8]].forEach(([x, z]) => canopy.add(buildTree(x, z, 0x3a2012, 0x15803d, 5.2)));
+    }
+    if (hasCashew) {
+      [[1.8, 2.4], [-1.8, -2.4]].forEach(([x, z]) => canopy.add(buildTree(x, z, 0x451a03, 0x16a34a, 4.8)));
+    }
+    if (hasKola) {
+      [[-3.2, 0], [3.2, 0]].forEach(([x, z]) => canopy.add(buildTree(x, z, 0x2e180c, 0x14532d, 5.8)));
+    }
+    if (hasPawpaw) {
+      [[-1.2, 2.8], [1.2, 2.8], [0, -2.6]].forEach(([x, z]) => shrub.add(buildShrub(x, z, 0x65a30d, 3.2, 0xeab308)));
+    }
+    if (!hasOilPalm && !hasPlantain && !hasCocoa && !hasMango && !hasCashew && !hasKola && !hasPawpaw && cropIds.some(c => ['mango', 'cashew', 'kola-nut', 'pawpaw'].includes(c))) {
+      [[-2.5, 1.5], [2.5, -1.5]].forEach(([x, z]) => canopy.add(buildTree(x, z)));
+    }
+
+    // 2. Cereals & Tubers
+    if (hasRice) {
+      herb.add(buildPaddyWater(0, 0, 6.5, 6.5));
+    }
+    if (hasYam) {
+      [[-2.0, -1.5], [2.0, 1.5], [0, -1.2], [-1.2, 1.8]].forEach(([x, z]) => herb.add(buildYamMound(x, z)));
+    }
+    if (hasMaize) {
+      [[-1.2, -1.8], [1.2, -1.8], [-1.5, 0.5], [1.5, -0.5], [0, 1.5], [2.2, -1.0]].forEach(([x, z]) => herb.add(buildMaize(x, z)));
+    }
+    if (hasCassava) {
+      for (let i = 0; i < 8; i++) {
+        const angle = (i / 8) * Math.PI * 2;
+        const r = 2.4 + Math.random() * 1.5;
+        herb.add(buildCassava(Math.cos(angle) * r, Math.sin(angle) * r));
+      }
+    }
+
+    // 3. Groundcover / Veggies / Legumes / Pineapples
+    if (hasPineapple) {
+      for (let col = -3.0; col <= 3.0; col += 0.8) {
+        if (Math.abs(col) < 5.0) herb.add(buildPineapple(col, 2.6));
+      }
+    }
+    if (hasScentOrBitter) {
+      for (let i = 0; i < 12; i++) {
+        const angle = (i / 12) * Math.PI * 2;
+        shrub.add(buildShrub(Math.cos(angle) * 5.2, Math.sin(angle) * 5.2, 0x14532d, 0.95));
+      }
+    }
+    if (hasLegumes || hasVeggies) {
+      for (let i = 0; i < 16; i++) {
+        const [gx, gz] = randInCircle(4.2);
+        shrub.add(buildShrub(gx, gz, 0x22c55e, 0.5, 0xdc2626));
+      }
+    }
+
+    // 4. Livestock & Fauna
+    if (livestockIds.includes('chickens') || livestockIds.includes('guinea-fowl')) {
+      fauna.add(buildChicken(-1.0, 1.0));
+      fauna.add(buildChicken(-1.4, 0.6));
+    }
+    if (livestockIds.includes('wad-goats') || livestockIds.includes('wad-sheep')) {
+      fauna.add(buildGoat(2.0, -1.5));
+      fauna.add(buildGoat(-2.2, -1.2));
+    }
+    if (livestockIds.includes('land-snail')) {
+      fauna.add(buildSculptedSnail(0.8, -0.8));
+      fauna.add(buildSculptedSnail(1.2, -0.5));
+    }
+  }
+
+  private buildFarm(farm: FarmEcosystem) {
+    const herb = this.layers.get('herbaceous')!;
+    const shrub = this.layers.get('shrub')!;
+    const canopy = this.layers.get('canopy')!;
+    const fauna = this.layers.get('fauna')!;
 
     switch (farm.id) {
       case 'cocoa-agroforest':
-        this.buildCocoaAgroforest(herbaceous, shrub, canopy);
+        this.buildCocoaAgroforest(herb, shrub, canopy, fauna);
         break;
       case 'yam-egusi-mound':
-        this.buildYamEgusiMound(herbaceous, shrub, canopy);
+        this.buildYamEgusiMound(herb, shrub, canopy, fauna);
         break;
       case 'cassava-maize-relay':
-        this.buildCassavaMaizeRelay(herbaceous, shrub, canopy);
+        this.buildCassavaMaizeRelay(herb, shrub, canopy, fauna);
         break;
       case 'ofada-rice-aquaculture':
-        this.buildOfadaRiceAquaculture(herbaceous, shrub, canopy);
+        this.buildOfadaRiceAquaculture(herb, shrub, canopy, fauna);
         break;
       case 'oil-palm-silvopasture':
-        this.buildOilPalmSilvopasture(herbaceous, shrub, canopy);
+        this.buildOilPalmSilvopasture(herb, shrub, canopy, fauna);
         break;
       case 'mandala-market-garden':
-        this.buildMandalaMarketGarden(herbaceous, shrub, canopy);
+        this.buildMandalaMarketGarden(herb, shrub, canopy, fauna);
         break;
       case 'savanna-cereal-belt':
-        this.buildSavannaCerealBelt(herbaceous, shrub, canopy);
+        this.buildSavannaCerealBelt(herb, shrub, canopy, fauna);
         break;
       case 'aquaponics-snailery':
-        this.buildAquaponicsSnailery(herbaceous, shrub, canopy);
+        this.buildAquaponicsSnailery(herb, shrub, canopy, fauna);
         break;
       default:
-        this.buildGenericFarm(herbaceous, shrub, canopy);
+        this.buildGenericFarm(herb, shrub, canopy, fauna);
     }
   }
 
-  private buildCocoaAgroforest(herb: THREE.Group, shrub: THREE.Group, canopy: THREE.Group) {
-    // Plantain as upper canopy
-    const plantainPositions: [number, number][] = [[-3, -3], [3, 2], [-2, 4], [4, -2], [0, -4], [-4, 1]];
+  private buildCocoaAgroforest(herb: THREE.Group, shrub: THREE.Group, canopy: THREE.Group, fauna: THREE.Group) {
+    // 1. Emergent Agroforestry Shade Canopy (Iroko / Mahogany)
+    canopy.add(buildTree(-3.5, 3.2, 0x2e180c, 0x15803d, 7.8));
+    canopy.add(buildTree(3.8, -3.2, 0x2e180c, 0x15803d, 7.2));
+
+    const plantainPositions: [number, number][] = [[-2.5, -2.5], [2.8, 1.8], [-1.8, 3.2], [3.2, -2.0], [0, -3.5]];
     plantainPositions.forEach(([x, z]) => canopy.add(buildPlantain(x, z)));
 
-    // Cocoa trees as subcanopy
-    const cocoaPositions: [number, number][] = [[0, 0], [-2, 1], [2, -1], [-1, -3], [3, 3], [-3, -1], [1, 2]];
+    const cocoaPositions: [number, number][] = [[0, 0], [-1.8, 0.8], [1.8, -0.8], [-0.8, -2.0], [2.2, 2.4], [-2.6, -0.8], [0.8, 1.8]];
     cocoaPositions.forEach(([x, z]) => shrub.add(buildCocoa(x, z)));
 
-    // Ginger understory (small green shrubs)
-    for (let i = 0; i < 20; i++) {
-      const gx = (Math.random() - 0.5) * 10;
-      const gz = (Math.random() - 0.5) * 10;
-      herb.add(buildShrub(gx, gz, 0x388e3c, 0.35));
+    for (let i = 0; i < 24; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const r = Math.sqrt(Math.random()) * 5.0;
+      herb.add(buildShrub(Math.cos(angle) * r, Math.sin(angle) * r, 0x16a34a, 0.35));
     }
 
-    // Bitter leaf boundary hedge
-    for (let i = 0; i < 8; i++) {
-      const angle = (i / 8) * Math.PI * 2;
-      const hx = Math.cos(angle) * 5.5;
-      const hz = Math.sin(angle) * 5.5;
-      shrub.add(buildShrub(hx, hz, 0x1b5e20, 0.9));
+    for (let i = 0; i < 10; i++) {
+      const angle = (i / 10) * Math.PI * 2;
+      shrub.add(buildShrub(Math.cos(angle) * 5.8, Math.sin(angle) * 5.8, 0x14532d, 0.9));
     }
+
+    fauna.add(buildChicken(-1.2, 0.8));
+    fauna.add(buildChicken(-1.5, 0.4));
+    fauna.add(buildChicken(1.4, 0.6));
   }
 
-  private buildYamEgusiMound(herb: THREE.Group, shrub: THREE.Group, _canopy: THREE.Group) {
-    // 6 yam mounds
-    const moundTerrain = buildMoundTerrain(6, 4);
-    herb.add(moundTerrain);
+  private buildYamEgusiMound(herb: THREE.Group, shrub: THREE.Group, canopy: THREE.Group, fauna: THREE.Group) {
+    canopy.add(buildTree(-3.8, -3.5, 0x2e180c, 0x15803d, 6.8));
 
-    // Maize stakes around mounds
-    const maizePos: [number, number][] = [[-2, -2], [2, -2], [0, 2], [-2, 2], [2, 2], [0, -3], [3, 0], [-3, 0]];
-    maizePos.forEach(([x, z]) => herb.add(buildMaize(x, z)));
-
-    // Yam vines on mounds
-    const yamPos: [number, number][] = [[-3, -3], [3, 2], [0, 0], [-2, 3], [3, -3], [-1, -1]];
+    const yamPos: [number, number][] = [[-2.2, -2.0], [2.2, 1.8], [0, 0], [-1.8, 2.4], [2.4, -2.2], [-0.8, -1.2]];
     yamPos.forEach(([x, z]) => herb.add(buildYamMound(x, z)));
 
-    // Egusi ground cover (flat green clumps)
-    for (let i = 0; i < 30; i++) {
-      const gx = (Math.random() - 0.5) * 8;
-      const gz = (Math.random() - 0.5) * 8;
+    const maizePos: [number, number][] = [[-1.2, -1.5], [1.2, -1.2], [0, 1.8], [-1.5, 1.2], [1.5, 1.6], [0, -2.4], [2.4, 0], [-2.5, 0]];
+    maizePos.forEach(([x, z]) => herb.add(buildMaize(x, z)));
+
+    for (let i = 0; i < 28; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const r = Math.sqrt(Math.random()) * 5.2;
       const egusi = new THREE.Mesh(
-        new THREE.SphereGeometry(0.3 + Math.random() * 0.15, 6, 3),
-        new THREE.MeshStandardMaterial({ color: 0x558b2f, roughness: 0.9 })
+        new THREE.SphereGeometry(0.32 + Math.random() * 0.12, 8, 4),
+        new THREE.MeshStandardMaterial({ color: 0x4d7c0f, roughness: 0.85 })
       );
-      egusi.scale.set(1.8, 0.15, 1.5);
-      egusi.position.set(gx, 0.05, gz);
+      egusi.scale.set(1.6, 0.15, 1.4);
+      egusi.position.set(Math.cos(angle) * r, 0.05, Math.sin(angle) * r);
       egusi.receiveShadow = true;
       herb.add(egusi);
     }
 
-    // Pigeon pea shrubs
-    const ppPos: [number, number][] = [[-4, 0], [4, 0], [0, 4], [0, -4]];
-    ppPos.forEach(([x, z]) => shrub.add(buildShrub(x, z, 0x4caf50, 1.3)));
+    const ppPos: [number, number][] = [[-4.5, 0], [4.5, 0], [0, 4.5], [0, -4.5], [-3.2, 3.2], [3.2, -3.2]];
+    ppPos.forEach(([x, z]) => shrub.add(buildShrub(x, z, 0x15803d, 1.3)));
+
+    fauna.add(buildChicken(0.8, -0.6));
+    fauna.add(buildGoat(-3.0, 1.5));
   }
 
-  private buildCassavaMaizeRelay(herb: THREE.Group, shrub: THREE.Group, _canopy: THREE.Group) {
-    // Cassava rows
+  private buildCassavaMaizeRelay(herb: THREE.Group, shrub: THREE.Group, canopy: THREE.Group, fauna: THREE.Group) {
+    canopy.add(buildTree(3.5, 3.5, 0x2e180c, 0x15803d, 6.5));
+
     for (let row = -2; row <= 2; row++) {
       for (let col = -3; col <= 3; col++) {
-        if (Math.random() > 0.3) {
-          herb.add(buildCassava(col * 1.4 + (Math.random() - 0.5) * 0.3, row * 1.6));
+        const x = col * 1.3 + (Math.random() - 0.5) * 0.25;
+        const z = row * 1.4 + (Math.random() - 0.5) * 0.25;
+        if (Math.hypot(x, z) < 5.4) {
+          herb.add(buildCassava(x, z));
         }
       }
     }
 
-    // Maize interspersed
-    const maizePos: [number, number][] = [[-1, -2], [1, 0], [-1, 2], [1, -2], [0, 1]];
+    const maizePos: [number, number][] = [[-1.2, -1.8], [1.2, 0.2], [-1.2, 1.8], [1.2, -1.8], [0, 0.8], [-2.5, 0.5], [2.5, -0.5]];
     maizePos.forEach(([x, z]) => herb.add(buildMaize(x, z)));
 
-    // Pigeon pea boundary
-    for (let i = 0; i < 6; i++) {
-      const angle = (i / 6) * Math.PI * 2;
-      shrub.add(buildShrub(Math.cos(angle) * 5, Math.sin(angle) * 5, 0x4caf50, 1.5));
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2;
+      shrub.add(buildShrub(Math.cos(angle) * 5.2, Math.sin(angle) * 5.2, 0x16a34a, 1.4));
     }
+
+    fauna.add(buildChicken(0.5, 1.5));
+    fauna.add(buildChicken(0.9, 1.2));
   }
 
-  private buildOfadaRiceAquaculture(herb: THREE.Group, _shrub: THREE.Group, _canopy: THREE.Group) {
-    // Flooded paddy
-    herb.add(buildPaddyWater(0, 0, 9, 9));
+  private buildOfadaRiceAquaculture(herb: THREE.Group, _shrub: THREE.Group, canopy: THREE.Group, fauna: THREE.Group) {
+    canopy.add(buildTree(-3.5, 3.2, 0x2e180c, 0x15803d, 6.2));
+    herb.add(buildPaddyWater(0, 0, 7.5, 7.5));
 
-    // Fish trench around perimeter (blue ring)
-    const trenchGeo = new THREE.RingGeometry(4.5, 5.2, 32);
+    const trenchGeo = new THREE.RingGeometry(4.0, 5.0, 48);
     const trenchMat = new THREE.MeshStandardMaterial({
-      color: 0x1565c0,
-      roughness: 0.05,
+      color: 0x0284c7,
+      roughness: 0.08,
+      metalness: 0.15,
       transparent: true,
-      opacity: 0.8,
+      opacity: 0.85,
     });
     const trench = new THREE.Mesh(trenchGeo, trenchMat);
     trench.rotation.x = -Math.PI / 2;
-    trench.position.y = 0.01;
+    trench.position.y = 0.02;
     herb.add(trench);
 
-    // Additional rice stems around paddy
-    for (let i = 0; i < 20; i++) {
-      const rx = (Math.random() - 0.5) * 7;
-      const rz = (Math.random() - 0.5) * 7;
-      herb.add(buildShrub(rx, rz, 0x8db04a, 0.55));
+    for (let i = 0; i < 24; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const r = 2.0 + Math.random() * 1.8;
+      herb.add(buildShrub(Math.cos(angle) * r, Math.sin(angle) * r, 0x65a30d, 0.55));
     }
+
+    fauna.add(buildChicken(3.5, 2.5));
   }
 
-  private buildOilPalmSilvopasture(herb: THREE.Group, shrub: THREE.Group, canopy: THREE.Group) {
-    // Oil palm grid
-    const palmPos: [number, number][] = [[-4, -4], [0, -4], [4, -4], [-4, 0], [0, 0], [4, 0], [-4, 4], [0, 4], [4, 4]];
+  private buildOilPalmSilvopasture(herb: THREE.Group, shrub: THREE.Group, canopy: THREE.Group, fauna: THREE.Group) {
+    const palmPos: [number, number][] = [[-3.0, -3.0], [0, -3.5], [3.0, -3.0], [-3.2, 0], [0, 0], [3.2, 0], [-3.0, 3.0], [0, 3.5], [3.0, 3.0]];
     palmPos.forEach(([x, z]) => canopy.add(buildOilPalm(x, z)));
 
-    // Pineapple contour rows
     for (let row = -2; row <= 2; row++) {
-      for (let col = -4; col <= 4; col += 0.8) {
-        if (Math.random() > 0.4) {
-          herb.add(buildPineapple(col, row * 2));
+      for (let col = -3.5; col <= 3.5; col += 0.9) {
+        const x = col;
+        const z = row * 1.8;
+        if (Math.hypot(x, z) < 5.2 && Math.random() > 0.3) {
+          herb.add(buildPineapple(x, z));
         }
       }
     }
 
-    // Ginger understory
-    for (let i = 0; i < 25; i++) {
-      const gx = (Math.random() - 0.5) * 8;
-      const gz = (Math.random() - 0.5) * 8;
-      herb.add(buildShrub(gx, gz, 0x388e3c, 0.4));
+    for (let i = 0; i < 20; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const r = Math.sqrt(Math.random()) * 4.8;
+      herb.add(buildShrub(Math.cos(angle) * r, Math.sin(angle) * r, 0x15803d, 0.38));
     }
 
-    // Bitter leaf hedge
-    for (let i = 0; i < 6; i++) {
-      const angle = (i / 6) * Math.PI * 2;
-      shrub.add(buildShrub(Math.cos(angle) * 5.5, Math.sin(angle) * 5.5, 0x1b5e20, 1.0));
-    }
+    fauna.add(buildGoat(-1.5, 1.2));
+    fauna.add(buildGoat(1.8, -1.5));
   }
 
-  private buildMandalaMarketGarden(herb: THREE.Group, shrub: THREE.Group, _canopy: THREE.Group) {
-    // Outer ring — bitter leaf + scent leaf
-    for (let i = 0; i < 16; i++) {
-      const angle = (i / 16) * Math.PI * 2;
-      const r = 5.0;
+  private buildMandalaMarketGarden(herb: THREE.Group, shrub: THREE.Group, canopy: THREE.Group, fauna: THREE.Group) {
+    canopy.add(buildTree(-3.5, -3.5, 0x2e180c, 0x15803d, 6.0));
+
+    for (let i = 0; i < 18; i++) {
+      const angle = (i / 18) * Math.PI * 2;
+      const r = 5.2;
       const isScent = i % 2 === 0;
       shrub.add(buildShrub(
         Math.cos(angle) * r, Math.sin(angle) * r,
-        isScent ? 0x2e7d32 : 0x1b5e20,
-        isScent ? 0.7 : 1.0
+        isScent ? 0x16a34a : 0x14532d,
+        isScent ? 0.75 : 1.05
       ));
     }
 
-    // Middle ring — peppers, okra
-    for (let i = 0; i < 10; i++) {
-      const angle = (i / 10) * Math.PI * 2;
-      const r = 3.2;
-      herb.add(buildShrub(Math.cos(angle) * r, Math.sin(angle) * r, 0x4caf50, 0.6, 0xe53935));
+    for (let i = 0; i < 12; i++) {
+      const angle = (i / 12) * Math.PI * 2;
+      const r = 3.4;
+      herb.add(buildShrub(Math.cos(angle) * r, Math.sin(angle) * r, 0x22c55e, 0.65, 0xdc2626));
     }
 
-    // Inner ring — tomatoes, leafy greens
-    for (let i = 0; i < 6; i++) {
-      const angle = (i / 6) * Math.PI * 2;
-      const r = 1.6;
-      herb.add(buildShrub(Math.cos(angle) * r, Math.sin(angle) * r, 0x388e3c, 0.5, 0xe53935));
+    for (let i = 0; i < 7; i++) {
+      const angle = (i / 7) * Math.PI * 2;
+      const r = 1.8;
+      herb.add(buildShrub(Math.cos(angle) * r, Math.sin(angle) * r, 0x16a34a, 0.55, 0xea580c));
     }
 
-    // Centre — pumpkin
-    herb.add(buildShrub(0, 0, 0x2d7a2f, 0.7));
+    herb.add(buildShrub(0, 0, 0x15803d, 0.8));
+    fauna.add(buildChicken(2.4, 0.8));
   }
 
-  private buildSavannaCerealBelt(herb: THREE.Group, shrub: THREE.Group, _canopy: THREE.Group) {
-    // Sorghum and millet in rows
+  private buildSavannaCerealBelt(herb: THREE.Group, shrub: THREE.Group, canopy: THREE.Group, fauna: THREE.Group) {
+    canopy.add(buildTree(3.5, -3.2, 0x451a03, 0x84cc16, 5.8));
+
     for (let row = -3; row <= 3; row++) {
-      for (let col = -4; col <= 4; col++) {
-        if (Math.random() > 0.25) {
-          // Tall sorghum or millet
+      for (let col = -3; col <= 3; col++) {
+        const x = col * 1.3 + (Math.random() - 0.5) * 0.25;
+        const z = row * 1.2 + (Math.random() - 0.5) * 0.25;
+        if (Math.hypot(x, z) < 5.4) {
           const isMillet = Math.random() > 0.5;
-          const h = isMillet ? 1.2 : 2.0;
-          herb.add(buildShrub(
-            col + (Math.random() - 0.5) * 0.3,
-            row * 1.2 + (Math.random() - 0.5) * 0.3,
-            isMillet ? 0xd4a54a : 0xc48a2a,
-            h
-          ));
+          herb.add(buildShrub(x, z, isMillet ? 0xca8a04 : 0xb45309, isMillet ? 1.3 : 2.1));
         }
       }
     }
 
-    // Pigeon pea / cowpea between rows
-    for (let i = 0; i < 10; i++) {
-      const gx = (Math.random() - 0.5) * 8;
-      const gz = (Math.random() - 0.5) * 6;
-      shrub.add(buildShrub(gx, gz, 0x8faf5a, 0.8));
+    for (let i = 0; i < 16; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const r = Math.sqrt(Math.random()) * 4.8;
+      shrub.add(buildShrub(Math.cos(angle) * r, Math.sin(angle) * r, 0x65a30d, 0.5));
     }
+
+    fauna.add(buildGoat(-2.0, 1.8));
+    fauna.add(buildGoat(2.2, -1.2));
   }
 
-  private buildAquaponicsSnailery(herb: THREE.Group, shrub: THREE.Group, _canopy: THREE.Group) {
-    // Main fish tank (large blue rectangle)
-    const tankGeo = new THREE.BoxGeometry(5, 0.8, 3);
+  private buildAquaponicsSnailery(herb: THREE.Group, shrub: THREE.Group, canopy: THREE.Group, fauna: THREE.Group) {
+    const tankGeo = new THREE.BoxGeometry(4.8, 0.9, 3.2);
     const tankMat = new THREE.MeshStandardMaterial({
-      color: 0x0d47a1,
+      color: 0x0369a1,
       roughness: 0.1,
       transparent: true,
-      opacity: 0.7,
+      opacity: 0.75,
     });
     const tank = new THREE.Mesh(tankGeo, tankMat);
-    tank.position.set(-2, -0.3, 0);
+    tank.position.set(-1.8, 0.1, 0);
     herb.add(tank);
 
-    // Water surface
     const waterSurf = new THREE.Mesh(
-      new THREE.PlaneGeometry(5, 3),
-      new THREE.MeshStandardMaterial({ color: 0x1565c0, roughness: 0.02, transparent: true, opacity: 0.85 })
+      new THREE.PlaneGeometry(4.6, 3.0),
+      new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.05, transparent: true, opacity: 0.9 })
     );
     waterSurf.rotation.x = -Math.PI / 2;
-    waterSurf.position.set(-2, 0.12, 0);
+    waterSurf.position.set(-1.8, 0.54, 0);
     herb.add(waterSurf);
 
-    // DWC raft bed
-    const raftGeo = new THREE.BoxGeometry(3, 0.05, 2);
-    const raftMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8 });
-    const raft = new THREE.Mesh(raftGeo, raftMat);
-    raft.position.set(2.5, 0.1, 0);
+    const raft = new THREE.Mesh(
+      new THREE.BoxGeometry(2.8, 0.06, 2.2),
+      new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.6 })
+    );
+    raft.position.set(2.4, 0.45, 0);
     herb.add(raft);
 
-    // Greens growing in DWC
-    for (let i = 0; i < 12; i++) {
-      const gx = 1.2 + Math.random() * 2.3;
+    for (let i = 0; i < 14; i++) {
+      const gx = 1.3 + Math.random() * 2.2;
       const gz = -0.8 + Math.random() * 1.6;
-      herb.add(buildShrub(gx, gz, 0x4caf50, 0.3 + Math.random() * 0.2));
+      herb.add(buildShrub(gx, gz, 0x22c55e, 0.32 + Math.random() * 0.15));
     }
 
-    // Biofilter box
     const biofilter = new THREE.Mesh(
-      new THREE.BoxGeometry(0.8, 1.0, 0.8),
-      new THREE.MeshStandardMaterial({ color: 0x37474f, roughness: 0.9 })
+      new THREE.BoxGeometry(0.9, 1.1, 0.9),
+      new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.85 })
     );
-    biofilter.position.set(-0.2, 0.5, 1.8);
+    biofilter.position.set(0.2, 0.55, 1.8);
     herb.add(biofilter);
 
-    // Snailery enclosure
-    const snailBox = new THREE.Mesh(
-      new THREE.BoxGeometry(1.8, 0.5, 1.2),
-      new THREE.MeshStandardMaterial({ color: 0x5d4037, roughness: 0.9, transparent: true, opacity: 0.6 })
-    );
-    snailBox.position.set(2.5, 0.25, -2.5);
-    herb.add(snailBox);
+    canopy.add(buildTree(2.2, -2.8, 0x451a03, 0x16a34a, 5.2));
 
-    // Pawpaw tree as snail feed source
-    shrub.add(buildTree(0, -3, 0x4a2810, 0x388e3c, 2.5, 1.2));
+    fauna.add(buildSculptedSnail(1.6, 1.2));
+    fauna.add(buildSculptedSnail(2.2, 0.8));
+    fauna.add(buildSculptedSnail(0.8, -1.8));
   }
 
-  private buildGenericFarm(herb: THREE.Group, shrub: THREE.Group, canopy: THREE.Group) {
-    for (let i = 0; i < 8; i++) {
-      const x = (Math.random() - 0.5) * 8;
-      const z = (Math.random() - 0.5) * 8;
+  private buildGenericFarm(herb: THREE.Group, shrub: THREE.Group, canopy: THREE.Group, fauna: THREE.Group) {
+    for (let i = 0; i < 4; i++) {
+      const [x, z] = randInCircle(4.5);
       canopy.add(buildTree(x, z));
     }
     for (let i = 0; i < 10; i++) {
-      herb.add(buildCassava((Math.random() - 0.5) * 6, (Math.random() - 0.5) * 6));
+      const [x, z] = randInCircle(4.0);
+      herb.add(buildCassava(x, z));
+    }
+    fauna.add(buildChicken(0, 0));
+  }
+
+  updateGrass(elapsedTime: number, sunPosition?: THREE.Vector3) {
+    if (this.instancedGrass) {
+      this.instancedGrass.update(elapsedTime, sunPosition);
+    }
+  }
+
+  setSeason(season: Season) {
+    if (this.instancedGrass) {
+      this.instancedGrass.setSeason(season);
     }
   }
 
@@ -357,7 +487,22 @@ export class FarmBuilder {
     if (g) g.visible = visible;
   }
 
+  getInteractiveObjects(): THREE.Object3D[] {
+    if (!this.farmGroup) return [];
+    const objs: THREE.Object3D[] = [];
+    this.farmGroup.traverse(child => {
+      if (child instanceof THREE.Mesh && child.parent) {
+        objs.push(child);
+      }
+    });
+    return objs;
+  }
+
   clear() {
+    if (this.instancedGrass) {
+      this.instancedGrass.dispose();
+      this.instancedGrass = null;
+    }
     if (this.farmGroup) {
       this.scene.remove(this.farmGroup);
       this.farmGroup.traverse(child => {
