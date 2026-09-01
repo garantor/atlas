@@ -1,11 +1,12 @@
 /**
  * Farm Atlas — FarmBuilder
  * Assembles procedural 3D scenes for each of the 8 farm ecosystems
- * and dynamically builds custom user-configured polycultures from the Sandbox!
+ * with dynamic instanced grass ground cover (spacejack/terra) and fractal botanical specimens (Codrops).
+ * Also builds custom user-configured polycultures from the Sandbox!
  */
 
 import * as THREE from 'three';
-import type { FarmEcosystem, ViewState } from '../data/types';
+import type { FarmEcosystem, ViewState, Season } from '../data/types';
 import {
   buildCassava, buildYamMound, buildMaize, buildOilPalm, buildPlantain,
   buildCocoa, buildPineapple, buildShrub, buildTree, buildPaddyWater,
@@ -13,8 +14,9 @@ import {
 } from './ProceduralVegetation';
 import { buildSculptedSnail } from './SculptedFauna';
 import { buildSubsurface } from './SubsurfaceCrossSection';
+import { InstancedGrass } from './InstancedGrass';
 
-type LayerName = 'canopy' | 'shrub' | 'herbaceous' | 'roots' | 'fauna' | 'particles';
+type LayerName = 'canopy' | 'shrub' | 'herbaceous' | 'roots' | 'fauna' | 'particles' | 'grass';
 
 function randInCircle(radius: number): [number, number] {
   const angle = Math.random() * Math.PI * 2;
@@ -27,23 +29,30 @@ export class FarmBuilder {
   private farmGroup: THREE.Group | null = null;
   private subsurfaceGroup: THREE.Group | null = null;
   private layers: Map<LayerName, THREE.Group> = new Map();
+  private instancedGrass: InstancedGrass | null = null;
 
   constructor(scene: THREE.Scene) {
     this.scene = scene;
   }
 
-  private initLayers(idName: string) {
+  private initLayers(idName: string, biome = 'rainforest') {
     this.clear();
     this.farmGroup = new THREE.Group();
     this.farmGroup.name = idName;
 
-    const layerNames: LayerName[] = ['canopy', 'shrub', 'herbaceous', 'roots', 'fauna', 'particles'];
+    const layerNames: LayerName[] = ['canopy', 'shrub', 'herbaceous', 'roots', 'fauna', 'particles', 'grass'];
     layerNames.forEach(name => {
       const g = new THREE.Group();
       g.name = `layer-${name}`;
       this.layers.set(name, g);
       this.farmGroup!.add(g);
     });
+
+    // Add Dynamic Instanced Grass Ground Layer (10,000 blades with GPU wind vertex shader)
+    this.instancedGrass = new InstancedGrass(10000);
+    this.instancedGrass.setBiomePalette(biome);
+    const grassLayer = this.layers.get('grass')!;
+    grassLayer.add(this.instancedGrass.getMesh());
 
     this.subsurfaceGroup = buildSubsurface();
     this.subsurfaceGroup.visible = false;
@@ -53,7 +62,7 @@ export class FarmBuilder {
   }
 
   build(farm: FarmEcosystem) {
-    this.initLayers(`farm-${farm.id}`);
+    this.initLayers(`farm-${farm.id}`, farm.biome);
     this.buildFarm(farm);
   }
 
@@ -62,7 +71,7 @@ export class FarmBuilder {
    * configured by the user in the Sandbox!
    */
   buildCustom(cropIds: string[], livestockIds: string[]) {
-    this.initLayers('farm-custom-sandbox');
+    this.initLayers('farm-custom-sandbox', 'rainforest');
 
     const herb = this.layers.get('herbaceous')!;
     const shrub = this.layers.get('shrub')!;
@@ -78,7 +87,10 @@ export class FarmBuilder {
     const hasOilPalm = cropIds.includes('oil-palm');
     const hasCocoa = cropIds.includes('cocoa');
     const hasPlantain = cropIds.includes('plantain');
-    const hasTree = cropIds.some(c => ['mango', 'cashew', 'kola-nut', 'pawpaw'].includes(c));
+    const hasMango = cropIds.includes('mango');
+    const hasCashew = cropIds.includes('cashew');
+    const hasKola = cropIds.includes('kola-nut');
+    const hasPawpaw = cropIds.includes('pawpaw');
     const hasMaize = cropIds.includes('maize');
     const hasYam = cropIds.some(c => c.includes('yam'));
     const hasCassava = cropIds.includes('cassava');
@@ -98,7 +110,19 @@ export class FarmBuilder {
     if (hasCocoa) {
       [[0, 0], [-1.8, -0.6], [1.8, 0.6], [-0.6, 1.8]].forEach(([x, z]) => shrub.add(buildCocoa(x, z)));
     }
-    if (hasTree && !hasOilPalm && !hasPlantain) {
+    if (hasMango) {
+      [[-2.6, 1.8], [2.6, -1.8]].forEach(([x, z]) => canopy.add(buildTree(x, z, 0x3a2012, 0x15803d, 5.2)));
+    }
+    if (hasCashew) {
+      [[1.8, 2.4], [-1.8, -2.4]].forEach(([x, z]) => canopy.add(buildTree(x, z, 0x451a03, 0x16a34a, 4.8)));
+    }
+    if (hasKola) {
+      [[-3.2, 0], [3.2, 0]].forEach(([x, z]) => canopy.add(buildTree(x, z, 0x2e180c, 0x14532d, 5.8)));
+    }
+    if (hasPawpaw) {
+      [[-1.2, 2.8], [1.2, 2.8], [0, -2.6]].forEach(([x, z]) => shrub.add(buildShrub(x, z, 0x65a30d, 3.2, 0xeab308)));
+    }
+    if (!hasOilPalm && !hasPlantain && !hasCocoa && !hasMango && !hasCashew && !hasKola && !hasPawpaw && cropIds.some(c => ['mango', 'cashew', 'kola-nut', 'pawpaw'].includes(c))) {
       [[-2.5, 1.5], [2.5, -1.5]].forEach(([x, z]) => canopy.add(buildTree(x, z)));
     }
 
@@ -191,6 +215,10 @@ export class FarmBuilder {
   }
 
   private buildCocoaAgroforest(herb: THREE.Group, shrub: THREE.Group, canopy: THREE.Group, fauna: THREE.Group) {
+    // 1. Emergent Agroforestry Shade Canopy (Iroko / Mahogany)
+    canopy.add(buildTree(-3.5, 3.2, 0x2e180c, 0x15803d, 7.8));
+    canopy.add(buildTree(3.8, -3.2, 0x2e180c, 0x15803d, 7.2));
+
     const plantainPositions: [number, number][] = [[-2.5, -2.5], [2.8, 1.8], [-1.8, 3.2], [3.2, -2.0], [0, -3.5]];
     plantainPositions.forEach(([x, z]) => canopy.add(buildPlantain(x, z)));
 
@@ -213,7 +241,9 @@ export class FarmBuilder {
     fauna.add(buildChicken(1.4, 0.6));
   }
 
-  private buildYamEgusiMound(herb: THREE.Group, shrub: THREE.Group, _canopy: THREE.Group, fauna: THREE.Group) {
+  private buildYamEgusiMound(herb: THREE.Group, shrub: THREE.Group, canopy: THREE.Group, fauna: THREE.Group) {
+    canopy.add(buildTree(-3.8, -3.5, 0x2e180c, 0x15803d, 6.8));
+
     const yamPos: [number, number][] = [[-2.2, -2.0], [2.2, 1.8], [0, 0], [-1.8, 2.4], [2.4, -2.2], [-0.8, -1.2]];
     yamPos.forEach(([x, z]) => herb.add(buildYamMound(x, z)));
 
@@ -240,7 +270,9 @@ export class FarmBuilder {
     fauna.add(buildGoat(-3.0, 1.5));
   }
 
-  private buildCassavaMaizeRelay(herb: THREE.Group, shrub: THREE.Group, _canopy: THREE.Group, fauna: THREE.Group) {
+  private buildCassavaMaizeRelay(herb: THREE.Group, shrub: THREE.Group, canopy: THREE.Group, fauna: THREE.Group) {
+    canopy.add(buildTree(3.5, 3.5, 0x2e180c, 0x15803d, 6.5));
+
     for (let row = -2; row <= 2; row++) {
       for (let col = -3; col <= 3; col++) {
         const x = col * 1.3 + (Math.random() - 0.5) * 0.25;
@@ -263,7 +295,8 @@ export class FarmBuilder {
     fauna.add(buildChicken(0.9, 1.2));
   }
 
-  private buildOfadaRiceAquaculture(herb: THREE.Group, _shrub: THREE.Group, _canopy: THREE.Group, fauna: THREE.Group) {
+  private buildOfadaRiceAquaculture(herb: THREE.Group, _shrub: THREE.Group, canopy: THREE.Group, fauna: THREE.Group) {
+    canopy.add(buildTree(-3.5, 3.2, 0x2e180c, 0x15803d, 6.2));
     herb.add(buildPaddyWater(0, 0, 7.5, 7.5));
 
     const trenchGeo = new THREE.RingGeometry(4.0, 5.0, 48);
@@ -312,7 +345,9 @@ export class FarmBuilder {
     fauna.add(buildGoat(1.8, -1.5));
   }
 
-  private buildMandalaMarketGarden(herb: THREE.Group, shrub: THREE.Group, _canopy: THREE.Group, fauna: THREE.Group) {
+  private buildMandalaMarketGarden(herb: THREE.Group, shrub: THREE.Group, canopy: THREE.Group, fauna: THREE.Group) {
+    canopy.add(buildTree(-3.5, -3.5, 0x2e180c, 0x15803d, 6.0));
+
     for (let i = 0; i < 18; i++) {
       const angle = (i / 18) * Math.PI * 2;
       const r = 5.2;
@@ -340,7 +375,9 @@ export class FarmBuilder {
     fauna.add(buildChicken(2.4, 0.8));
   }
 
-  private buildSavannaCerealBelt(herb: THREE.Group, shrub: THREE.Group, _canopy: THREE.Group, fauna: THREE.Group) {
+  private buildSavannaCerealBelt(herb: THREE.Group, shrub: THREE.Group, canopy: THREE.Group, fauna: THREE.Group) {
+    canopy.add(buildTree(3.5, -3.2, 0x451a03, 0x84cc16, 5.8));
+
     for (let row = -3; row <= 3; row++) {
       for (let col = -3; col <= 3; col++) {
         const x = col * 1.3 + (Math.random() - 0.5) * 0.25;
@@ -362,7 +399,7 @@ export class FarmBuilder {
     fauna.add(buildGoat(2.2, -1.2));
   }
 
-  private buildAquaponicsSnailery(herb: THREE.Group, shrub: THREE.Group, _canopy: THREE.Group, fauna: THREE.Group) {
+  private buildAquaponicsSnailery(herb: THREE.Group, shrub: THREE.Group, canopy: THREE.Group, fauna: THREE.Group) {
     const tankGeo = new THREE.BoxGeometry(4.8, 0.9, 3.2);
     const tankMat = new THREE.MeshStandardMaterial({
       color: 0x0369a1,
@@ -402,7 +439,7 @@ export class FarmBuilder {
     biofilter.position.set(0.2, 0.55, 1.8);
     herb.add(biofilter);
 
-    shrub.add(buildTree(2.2, -2.8, 0x451a03, 0x16a34a, 2.8, 1.4));
+    canopy.add(buildTree(2.2, -2.8, 0x451a03, 0x16a34a, 5.2));
 
     fauna.add(buildSculptedSnail(1.6, 1.2));
     fauna.add(buildSculptedSnail(2.2, 0.8));
@@ -410,7 +447,7 @@ export class FarmBuilder {
   }
 
   private buildGenericFarm(herb: THREE.Group, shrub: THREE.Group, canopy: THREE.Group, fauna: THREE.Group) {
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 4; i++) {
       const [x, z] = randInCircle(4.5);
       canopy.add(buildTree(x, z));
     }
@@ -419,6 +456,18 @@ export class FarmBuilder {
       herb.add(buildCassava(x, z));
     }
     fauna.add(buildChicken(0, 0));
+  }
+
+  updateGrass(elapsedTime: number, sunPosition?: THREE.Vector3) {
+    if (this.instancedGrass) {
+      this.instancedGrass.update(elapsedTime, sunPosition);
+    }
+  }
+
+  setSeason(season: Season) {
+    if (this.instancedGrass) {
+      this.instancedGrass.setSeason(season);
+    }
   }
 
   setViewState(viewState: ViewState) {
@@ -438,7 +487,22 @@ export class FarmBuilder {
     if (g) g.visible = visible;
   }
 
+  getInteractiveObjects(): THREE.Object3D[] {
+    if (!this.farmGroup) return [];
+    const objs: THREE.Object3D[] = [];
+    this.farmGroup.traverse(child => {
+      if (child instanceof THREE.Mesh && child.parent) {
+        objs.push(child);
+      }
+    });
+    return objs;
+  }
+
   clear() {
+    if (this.instancedGrass) {
+      this.instancedGrass.dispose();
+      this.instancedGrass = null;
+    }
     if (this.farmGroup) {
       this.scene.remove(this.farmGroup);
       this.farmGroup.traverse(child => {

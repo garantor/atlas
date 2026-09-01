@@ -1,7 +1,8 @@
 /**
  * Farm Atlas — FarmRenderer
  * Museum-grade lighting rig, configurable Square / Circle 1-Ha farm pedestal,
- * PBR soil stratigraphy, and atmospheric studio environment.
+ * high-detail PBR soil stratigraphy, atmospheric Rayleigh sky dome, and realistic solar trajectory.
+ * Inspired by StackOverflow physically-based sunlight & environmental rigs.
  */
 
 import * as THREE from 'three';
@@ -19,6 +20,9 @@ export class FarmRenderer {
   private fillLight: THREE.HemisphereLight;
   private rimLight: THREE.DirectionalLight;
 
+  // Sky Atmosphere Dome
+  private skyDome: THREE.Mesh | null = null;
+
   // Plot Pedestal Meshes
   private islandMesh: THREE.Mesh;
   private islandRim: THREE.Mesh;
@@ -35,8 +39,8 @@ export class FarmRenderer {
     this.scene = scene;
     this.renderer = renderer;
 
-    // ─── 1. Studio Key Light (Soft Warm Sun with Clean Penumbra) ─────────────
-    this.sunLight = new THREE.DirectionalLight(0xfff7ed, 3.0);
+    // ─── 1. Natural Solar Key Light (Physically Based Directional Sun) ───────
+    this.sunLight = new THREE.DirectionalLight(0xfff7ed, 3.2);
     this.sunLight.position.set(14, 20, 12);
     this.sunLight.castShadow = true;
     this.sunLight.shadow.mapSize.set(2048, 2048);
@@ -46,38 +50,43 @@ export class FarmRenderer {
     this.sunLight.shadow.camera.right = 16;
     this.sunLight.shadow.camera.top = 16;
     this.sunLight.shadow.camera.bottom = -16;
-    this.sunLight.shadow.bias = -0.0004;
-    this.sunLight.shadow.radius = 2.8;
+    this.sunLight.shadow.bias = -0.00035;
+    this.sunLight.shadow.normalBias = 0.02;
+    this.sunLight.shadow.radius = 2.4;
     scene.add(this.sunLight);
 
-    // ─── 2. Sky & Ambient Fill (Soft Diffuse Bounce) ──────────────────────────
+    // ─── 2. Sky & Soil Ambient Fill (Soft Diffuse Bounce) ────────────────────
     this.fillLight = new THREE.HemisphereLight(
-      0xbae6fd,  // soft sky blue
-      0x14532d,  // rich forest ground bounce
-      0.95
+      0xbae6fd,  // Zenith: Atmospheric sky blue
+      0x1e140d,  // Nadir: Rich humic soil bounce
+      1.0
     );
     scene.add(this.fillLight);
 
-    this.ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+    this.ambientLight = new THREE.AmbientLight(0xffffff, 0.35);
     scene.add(this.ambientLight);
 
-    // ─── 3. Silhouette Rim Light (Clean Specular Contours) ───────────────────
-    this.rimLight = new THREE.DirectionalLight(0xfef08a, 0.9);
+    // ─── 3. Specular Rim Light (Clean Specular Contours on Leaves & Fauna) ───
+    this.rimLight = new THREE.DirectionalLight(0xfef08a, 0.85);
     this.rimLight.position.set(-12, 14, -14);
     scene.add(this.rimLight);
 
-    // ─── 4. Pedestal Placeholder & Soft Shadow ───────────────────────────────
-    const soilTex = getSoilTexture(0x15803d);
+    // ─── 4. Atmospheric Sky Dome ─────────────────────────────────────────────
+    this.createAtmosphericSkyDome();
+
+    // ─── 5. PBR Soil Pedestal & Contact Soft Shadow ──────────────────────────
+    const soilTex = getSoilTexture(0x15803d, false);
     const islandMat = getCleanPBR({
       map: soilTex.map,
       bumpMap: soilTex.bumpMap,
-      bumpScale: 0.05,
-      roughness: 0.8,
+      bumpScale: 0.06,
+      roughnessMap: soilTex.roughnessMap,
+      roughness: 0.75,
       clearcoat: 0.15,
-      clearcoatRoughness: 0.2,
+      clearcoatRoughness: 0.25,
     });
     const rimMat = getCleanPBR({
-      color: 0x451a03,
+      color: 0x3d2314,
       roughness: 0.9,
       clearcoat: 0.05,
     });
@@ -113,6 +122,60 @@ export class FarmRenderer {
   }
 
   /**
+   * Atmospheric Sky Dome Shader with realistic Rayleigh-like gradient & horizon haze
+   */
+  private createAtmosphericSkyDome() {
+    const skyGeo = new THREE.SphereGeometry(95, 32, 24);
+    const skyMat = new THREE.ShaderMaterial({
+      uniforms: {
+        uZenithColor: { value: new THREE.Color(0x0f172a) },
+        uHorizonColor: { value: new THREE.Color(0x1e293b) },
+        uSunColor: { value: new THREE.Color(0xfef08a) },
+        uSunPosition: { value: new THREE.Vector3(14, 20, 12).normalize() },
+      },
+      vertexShader: `
+        varying vec3 vWorldPosition;
+        void main() {
+          vec4 worldPos = modelMatrix * vec4(position, 1.0);
+          vWorldPosition = worldPos.xyz;
+          gl_Position = projectionMatrix * viewMatrix * worldPos;
+        }
+      `,
+      fragmentShader: `
+        uniform vec3 uZenithColor;
+        uniform vec3 uHorizonColor;
+        uniform vec3 uSunColor;
+        uniform vec3 uSunPosition;
+        varying vec3 vWorldPosition;
+
+        void main() {
+          vec3 dir = normalize(vWorldPosition);
+          float elevation = max(dir.y, 0.0);
+          
+          // Smooth Rayleigh atmospheric gradient from horizon to zenith
+          vec3 sky = mix(uHorizonColor, uZenithColor, pow(elevation, 0.6));
+
+          // Soft solar flare glow around sun position
+          float sunDot = max(dot(dir, uSunPosition), 0.0);
+          float sunGlow = pow(sunDot, 64.0) * 0.8 + pow(sunDot, 8.0) * 0.2;
+          sky += uSunColor * sunGlow;
+
+          gl_FragColor = vec4(sky, 1.0);
+        }
+      `,
+      side: THREE.BackSide,
+      depthWrite: false,
+    });
+
+    this.skyDome = new THREE.Mesh(skyGeo, skyMat);
+    this.scene.add(this.skyDome);
+  }
+
+  getSunPosition(): THREE.Vector3 {
+    return this.sunLight.position;
+  }
+
+  /**
    * Dynamically build a Square 1-Hectare Farm Pedestal or Circular Diorama
    */
   setFarmShape(shape: 'square' | 'circle') {
@@ -144,7 +207,6 @@ export class FarmRenderer {
       const hedgeThickness = 0.15;
       const hedgeH = 0.12;
 
-      // 4 perimeter curbs
       const hedges = [
         { w: edgeLen, d: hedgeThickness, x: 0, z: 6.75 },
         { w: edgeLen, d: hedgeThickness, x: 0, z: -6.75 },
@@ -188,24 +250,38 @@ export class FarmRenderer {
     };
 
     this.currentBiomeColor = groundColors[farm.biome] || 0x15803d;
-    (this.islandMesh.material as THREE.MeshPhysicalMaterial).color.setHex(
-      isWet ? this.currentBiomeColor : this.lightenHex(this.currentBiomeColor, 0.3)
-    );
+    this.updateSoilMaterial(isWet);
   }
 
   setSeason(season: Season) {
     this.currentSeason = season;
-    if (season === 'wet') {
+    const isWet = season === 'wet';
+    this.updateSoilMaterial(isWet);
+
+    if (isWet) {
       this.fillLight.color.setHex(0xbae6fd);
+      this.fillLight.groundColor.setHex(0x1e140d);
       this.sunLight.color.setHex(0xfff7ed);
-      this.sunLight.intensity = 3.0;
-      (this.islandMesh.material as THREE.MeshPhysicalMaterial).color.setHex(this.currentBiomeColor);
+      this.sunLight.intensity = 3.2;
     } else {
+      // Golden dry season sunlight with warm amber dust bounce
       this.fillLight.color.setHex(0xfde047);
+      this.fillLight.groundColor.setHex(0x451a03);
       this.sunLight.color.setHex(0xfef08a);
-      this.sunLight.intensity = 3.4;
-      (this.islandMesh.material as THREE.MeshPhysicalMaterial).color.setHex(0x78350f);
+      this.sunLight.intensity = 3.5;
     }
+  }
+
+  private updateSoilMaterial(isWet: boolean) {
+    const soilTex = getSoilTexture(this.currentBiomeColor, !isWet);
+    const mat = this.islandMesh.material as THREE.MeshPhysicalMaterial;
+    mat.map = soilTex.map;
+    mat.bumpMap = soilTex.bumpMap;
+    mat.bumpScale = isWet ? 0.06 : 0.08;
+    mat.roughnessMap = soilTex.roughnessMap;
+    mat.roughness = isWet ? 0.7 : 0.95;
+    mat.clearcoat = isWet ? 0.2 : 0.05;
+    mat.needsUpdate = true;
   }
 
   setTimeOfDay(hour: number) {
@@ -220,45 +296,58 @@ export class FarmRenderer {
 
     this.sunLight.position.set(x, Math.max(y, 1), z);
 
+    if (this.skyDome && this.skyDome.material instanceof THREE.ShaderMaterial) {
+      this.skyDome.material.uniforms.uSunPosition.value.copy(this.sunLight.position).normalize();
+    }
+
+    // Solar spectrum temperature transitions across 24h
     if (hour < 7 || hour > 18) {
+      // Dawn / Dusk (Golden red-orange horizon)
       this.sunLight.color.setHex(0xf97316);
-      this.sunLight.intensity = 0.9;
+      this.sunLight.intensity = 1.2;
       this.ambientLight.intensity = 0.25;
+      if (this.skyDome && this.skyDome.material instanceof THREE.ShaderMaterial) {
+        this.skyDome.material.uniforms.uZenithColor.value.setHex(0x1e1b4b);
+        this.skyDome.material.uniforms.uHorizonColor.value.setHex(0x7c2d12);
+        this.skyDome.material.uniforms.uSunColor.value.setHex(0xf97316);
+      }
     } else if (hour < 9 || hour > 16) {
+      // Morning / Golden Afternoon
       this.sunLight.color.setHex(0xfbbf24);
-      this.sunLight.intensity = 2.2;
+      this.sunLight.intensity = 2.6;
       this.ambientLight.intensity = 0.35;
+      if (this.skyDome && this.skyDome.material instanceof THREE.ShaderMaterial) {
+        this.skyDome.material.uniforms.uZenithColor.value.setHex(0x0284c7);
+        this.skyDome.material.uniforms.uHorizonColor.value.setHex(0xfde68a);
+        this.skyDome.material.uniforms.uSunColor.value.setHex(0xfbbf24);
+      }
     } else {
+      // Solar Noon (Crisp warm white zenith)
       this.sunLight.color.setHex(0xfff7ed);
-      this.sunLight.intensity = 3.0;
-      this.ambientLight.intensity = 0.4;
+      this.sunLight.intensity = 3.2;
+      this.ambientLight.intensity = 0.45;
+      if (this.skyDome && this.skyDome.material instanceof THREE.ShaderMaterial) {
+        this.skyDome.material.uniforms.uZenithColor.value.setHex(0x0284c7);
+        this.skyDome.material.uniforms.uHorizonColor.value.setHex(0xbae6fd);
+        this.skyDome.material.uniforms.uSunColor.value.setHex(0xfff7ed);
+      }
     }
   }
 
   setTheme(theme: 'light' | 'dark') {
     this.currentTheme = theme;
     if (theme === 'dark') {
-      this.scene.background = new THREE.Color(0x060c08);
-      this.fillLight.color.setHex(0x064e3b);
-      this.fillLight.groundColor.setHex(0x022c22);
-      this.fillLight.intensity = 0.75;
-      this.ambientLight.intensity = 0.3;
+      this.scene.background = null; // Let Sky Dome render smoothly behind
+      this.fillLight.intensity = 0.85;
+      this.ambientLight.intensity = 0.35;
       this.renderer.toneMappingExposure = 1.15;
       (this.shadowPlane.material as THREE.MeshBasicMaterial).opacity = 0.55;
     } else {
-      this.scene.background = new THREE.Color(0xf6f2e8); // exact Seed Atlas warm paper ground
-      this.fillLight.color.setHex(0xbae6fd);
-      this.fillLight.groundColor.setHex(0x166534);
-      this.fillLight.intensity = 1.0;
+      this.scene.background = null;
+      this.fillLight.intensity = 1.05;
       this.ambientLight.intensity = 0.5;
-      this.renderer.toneMappingExposure = 1.0;
+      this.renderer.toneMappingExposure = 1.05;
       (this.shadowPlane.material as THREE.MeshBasicMaterial).opacity = 0.22;
     }
-  }
-
-  private lightenHex(hex: number, amount: number): number {
-    const c = new THREE.Color(hex);
-    c.lerp(new THREE.Color(0xffffff), amount);
-    return c.getHex();
   }
 }

@@ -18,7 +18,21 @@ export {
 } from './SculptedFauna';
 
 import * as THREE from 'three';
-import { getCleanPBR } from './CleanBotanicalModels';
+import { getCleanPBR, buildEmergentTree } from './CleanBotanicalModels';
+import {
+  generateEmergentHardwood,
+  generateCocoaTree,
+  generateFruitTree,
+  generatePawpaw,
+} from './ProceduralTreeEngine';
+
+export {
+  buildEmergentTree,
+  generateEmergentHardwood,
+  generateCocoaTree,
+  generateFruitTree,
+  generatePawpaw,
+};
 
 // Helper: Random in Circle
 function randInCircle(radius: number): [number, number] {
@@ -176,43 +190,16 @@ export function buildShrub(
   return group;
 }
 
-// ─── CLEAN GENERIC TREE SPECIMEN ─────────────────────────────────────────────
+// ─── REALISTIC FRACTAL AGROFORESTRY TREE SPECIMEN ──────────────────────────
 export function buildTree(
   x = 0, z = 0,
-  trunkColor = 0x3e2010,
-  canopyColor = 0x15803d,
-  trunkH = 3.8,
-  canopyR = 2.2
+  _trunkColor = 0x3e2010,
+  _canopyColor = 0x15803d,
+  trunkH = 6.2,
+  _canopyR = 2.4
 ): THREE.Group {
-  const group = new THREE.Group();
-  group.position.set(x, 0, z);
-  group.userData.swayable = true;
-  group.userData.swayPhase = Math.random() * Math.PI * 2;
-
-  const trunkGeo = new THREE.CylinderGeometry(0.16, 0.24, trunkH, 16);
-  trunkGeo.computeVertexNormals();
-  const trunkMat = getCleanPBR({ color: trunkColor, roughness: 0.9, clearcoat: 0.05 });
-  const trunk = new THREE.Mesh(trunkGeo, trunkMat);
-  trunk.position.y = trunkH / 2;
-  trunk.castShadow = true;
-  group.add(trunk);
-
-  const canopyMat = getCleanPBR({ color: canopyColor, roughness: 0.4, clearcoat: 0.3 });
-  for (let l = 0; l < 4; l++) {
-    const y = trunkH + l * (canopyR * 0.3);
-    const r = canopyR - l * (canopyR * 0.18);
-    for (let c = 0; c < 6; c++) {
-      const [cx, cz] = randInCircle(r * 0.7);
-      const clumpGeo = new THREE.SphereGeometry(r * 0.45, 16, 12);
-      clumpGeo.computeVertexNormals();
-      const clump = new THREE.Mesh(clumpGeo, canopyMat);
-      clump.position.set(cx, y, cz);
-      clump.castShadow = true;
-      group.add(clump);
-    }
-  }
-
-  return group;
+  // Uses procedural branching tree with buttress roots and realistic leaf clusters
+  return buildEmergentTree(x, z, trunkH);
 }
 
 // ─── CLEAN PADDY WATER ───────────────────────────────────────────────────────
