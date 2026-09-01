@@ -13,11 +13,13 @@ import { ParticleCycles } from './ParticleCycles';
 import { HotspotManager } from './HotspotManager';
 import { BoidsSimulation } from './BoidsSimulation';
 import { updateWindUniforms } from './WindShader';
+import { FirstPersonController, type WalkState } from './FirstPersonController';
 import type { FarmEcosystem, ViewState, Season } from '../data/types';
 
 interface SceneCallbacks {
   onHotspotClick: (id: string) => void;
   onHotspotPositions: (positions: Map<string, { x: number; y: number; visible: boolean }>) => void;
+  onWalkStateChange?: (state: WalkState) => void;
 }
 
 export class FarmScene {
@@ -31,6 +33,8 @@ export class FarmScene {
   private particleCycles: ParticleCycles;
   private hotspotManager: HotspotManager;
   private boidsSimulation: BoidsSimulation;
+  private firstPersonController: FirstPersonController;
+  private isFirstPerson = false;
   private callbacks: SceneCallbacks;
   private animationId: number | null = null;
   private lastTime = performance.now();
@@ -89,6 +93,11 @@ export class FarmScene {
       (id) => callbacks.onHotspotClick(id)
     );
     this.boidsSimulation = new BoidsSimulation(this.scene, 16);
+    this.firstPersonController = new FirstPersonController(
+      this.camera,
+      canvas,
+      (state) => callbacks.onWalkStateChange?.(state)
+    );
 
     canvas.addEventListener('click', (e) => this.hotspotManager.handleClick(e));
 
@@ -96,6 +105,35 @@ export class FarmScene {
     window.addEventListener('resize', () => this.resize());
 
     this.startLoop();
+  }
+
+  /**
+   * Enter First-Person Walking Mode at 1.65m farmer eye level
+   */
+  enterWalkMode(startPos?: THREE.Vector3) {
+    this.isFirstPerson = true;
+    this.controls.enabled = false;
+    const pos = startPos || new THREE.Vector3(0, 1.65, 5.0);
+    this.firstPersonController.enable(pos, new THREE.Vector3(0, 1.65, 0));
+  }
+
+  /**
+   * Exit Walk Mode back to Cinematic Orbit Controls
+   */
+  exitWalkMode() {
+    this.isFirstPerson = false;
+    this.firstPersonController.disable();
+    this.controls.enabled = true;
+    this.flyToPreset('overview');
+  }
+
+  toggleWalkMode() {
+    if (this.isFirstPerson) {
+      this.exitWalkMode();
+    } else {
+      this.enterWalkMode();
+    }
+    return this.isFirstPerson;
   }
 
   /** Load and render a specific farm ecosystem */
@@ -206,7 +244,12 @@ export class FarmScene {
       this.lastTime = now;
       this.elapsedTime += delta;
 
-      this.controls.update();
+      if (this.isFirstPerson) {
+        this.firstPersonController.update(delta, this.farmBuilder.getInteractiveObjects());
+      } else {
+        this.controls.update();
+      }
+
       this.particleCycles.update(delta);
       this.boidsSimulation.update(delta);
       updateWindUniforms(this.scene, this.elapsedTime);

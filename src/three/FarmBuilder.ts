@@ -438,6 +438,17 @@ export class FarmBuilder {
     if (g) g.visible = visible;
   }
 
+  getInteractiveObjects(): THREE.Object3D[] {
+    if (!this.farmGroup) return [];
+    const objs: THREE.Object3D[] = [];
+    this.farmGroup.traverse(child => {
+      if (child instanceof THREE.Mesh && child.parent) {
+        objs.push(child);
+      }
+    });
+    return objs;
+  }
+
   clear() {
     if (this.farmGroup) {
       this.scene.remove(this.farmGroup);
