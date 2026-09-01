@@ -11,6 +11,7 @@ import {
   buildCocoa, buildPineapple, buildShrub, buildTree, buildPaddyWater,
   buildChicken, buildGoat
 } from './ProceduralVegetation';
+import { buildSculptedSnail } from './SculptedFauna';
 import { buildSubsurface } from './SubsurfaceCrossSection';
 
 type LayerName = 'canopy' | 'shrub' | 'herbaceous' | 'roots' | 'fauna' | 'particles';
@@ -146,6 +147,10 @@ export class FarmBuilder {
     if (livestockIds.includes('wad-goats') || livestockIds.includes('wad-sheep')) {
       fauna.add(buildGoat(2.0, -1.5));
       fauna.add(buildGoat(-2.2, -1.2));
+    }
+    if (livestockIds.includes('land-snail')) {
+      fauna.add(buildSculptedSnail(0.8, -0.8));
+      fauna.add(buildSculptedSnail(1.2, -0.5));
     }
   }
 
@@ -357,7 +362,7 @@ export class FarmBuilder {
     fauna.add(buildGoat(2.2, -1.2));
   }
 
-  private buildAquaponicsSnailery(herb: THREE.Group, shrub: THREE.Group, _canopy: THREE.Group, _fauna: THREE.Group) {
+  private buildAquaponicsSnailery(herb: THREE.Group, shrub: THREE.Group, _canopy: THREE.Group, fauna: THREE.Group) {
     const tankGeo = new THREE.BoxGeometry(4.8, 0.9, 3.2);
     const tankMat = new THREE.MeshStandardMaterial({
       color: 0x0369a1,
@@ -398,6 +403,10 @@ export class FarmBuilder {
     herb.add(biofilter);
 
     shrub.add(buildTree(2.2, -2.8, 0x451a03, 0x16a34a, 2.8, 1.4));
+
+    fauna.add(buildSculptedSnail(1.6, 1.2));
+    fauna.add(buildSculptedSnail(2.2, 0.8));
+    fauna.add(buildSculptedSnail(0.8, -1.8));
   }
 
   private buildGenericFarm(herb: THREE.Group, shrub: THREE.Group, canopy: THREE.Group, fauna: THREE.Group) {

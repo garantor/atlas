@@ -9,9 +9,13 @@ export {
   buildCleanPlantain as buildPlantain,
   buildCleanMaize as buildMaize,
   buildCleanYamMound as buildYamMound,
-  buildCleanChicken as buildChicken,
-  buildCleanGoat as buildGoat,
 } from './CleanBotanicalModels';
+
+export {
+  buildSculptedChicken as buildChicken,
+  buildSculptedGoat as buildGoat,
+  buildSculptedSnail as buildCleanSnail,
+} from './SculptedFauna';
 
 import * as THREE from 'three';
 import { getCleanPBR } from './CleanBotanicalModels';
