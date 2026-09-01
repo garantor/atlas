@@ -1,46 +1,51 @@
 import { useAtlas, useSelectedFarm } from '@/state/useAtlas';
-import { lerLabel } from '@/data/intercroppingRules';
+import { lerLabel, simulateIntercropping } from '@/data/intercroppingRules';
+import type { FarmerAdvisory } from '@/data/types';
 
 export function SimulationPanel() {
-  const { simulationResult } = useAtlas();
+  const { simulationResult, activeDisplayMode, sandboxCropIds, sandboxLivestockIds } = useAtlas();
   const farm = useSelectedFarm();
-  const { ler, nitrogenDelta, weedSuppression, pestResistance, canopyPAR, waterEfficiency, compatibilityWarnings, synergies } = simulationResult;
 
-  const { label, status } = lerLabel(ler);
+  // If in preset farm mode and sandbox is empty, evaluate active farm's advisories
+  const activeResult = activeDisplayMode === 'sandbox' && (sandboxCropIds.length > 0 || sandboxLivestockIds.length > 0)
+    ? simulationResult
+    : farm
+      ? simulateIntercropping(farm.cropIds, farm.livestockIds)
+      : simulationResult;
 
-  // LER gauge: max meaningful LER ~2.5
+  const { ler, nitrogenDelta, weedSuppression, pestResistance, canopyPAR, waterEfficiency, farmerAdvisories } = activeResult;
+  const { label, status } = lerLabel(ler || (farm?.lerBaseline ?? 1.0));
+
+  const currentLER = ler || (farm?.lerBaseline ?? 1.0);
   const lerCircumference = 2 * Math.PI * 40;
-  const lerFill = Math.min(ler / 2.5, 1) * lerCircumference;
+  const lerFill = Math.min(currentLER / 2.5, 1) * lerCircumference;
   const lerOffset = lerCircumference - lerFill;
-
-  const lerColor = status === 'good' ? '#f5a623' : status === 'warn' ? '#ef6c00' : '#c62828';
+  const lerColor = status === 'good' ? 'var(--status-good)' : status === 'warn' ? 'var(--status-warn)' : 'var(--status-bad)';
 
   return (
-    <aside className="simulation-panel" aria-label="Intercropping simulation">
-      {/* LER Gauge */}
+    <aside className="simulation-panel" aria-label="Intercropping simulation & Farmer Advisories">
+      {/* LER & Synergy Overview Gauge */}
       <div className="synergy-hud">
         <div className="hud-title">
           <span>⚗️</span>
-          <span>Synergy Analysis</span>
+          <span>Ecosystem Synergy & LER</span>
         </div>
 
         <div className="ler-gauge-wrap">
           <svg
-            width="100"
-            height="100"
+            width="90"
+            height="90"
             viewBox="0 0 100 100"
             className="ler-gauge-svg"
             role="img"
-            aria-label={`LER ${ler.toFixed(2)}`}
+            aria-label={`LER ${currentLER.toFixed(2)}`}
           >
-            {/* Track */}
             <circle
               className="ler-gauge-track"
               cx="50" cy="50" r="40"
               strokeDasharray={lerCircumference}
               style={{ transform: 'rotate(-90deg)', transformOrigin: 'center' }}
             />
-            {/* Fill */}
             <circle
               className="ler-gauge-fill"
               cx="50" cy="50" r="40"
@@ -52,88 +57,169 @@ export function SimulationPanel() {
                 stroke: lerColor,
               }}
             />
-            {/* Label */}
             <text className="ler-gauge-label" x="50" y="47" style={{ fill: lerColor }}>
-              {ler === 0 ? '—' : ler.toFixed(2)}
+              {currentLER.toFixed(2)}
             </text>
-            <text className="ler-gauge-sub" x="50" y="59">
+            <text className="ler-gauge-sub" x="50" y="60">
               LER
             </text>
           </svg>
 
           <div className="ler-gauge-info">
-            <h4>{ler === 0 ? 'Add crops to sandbox' : 'Land Equivalent Ratio'}</h4>
-            {ler > 0 && (
-              <span className={`ler-status ${status}`}>{label}</span>
-            )}
-            {ler > 0 && (
-              <p style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '6px', lineHeight: 1.5 }}>
-                {ler >= 1 ? `${((ler - 1) * 100).toFixed(0)}% more efficient than monocultures` : 'Monoculture is more land-efficient'}
-              </p>
-            )}
+            <h4>{label}</h4>
+            <span className={`ler-status ${status}`}>
+              {currentLER >= 1
+                ? `${((currentLER - 1) * 100).toFixed(0)}% more yield vs monoculture`
+                : 'Monoculture more land-efficient'}
+            </span>
+            <p style={{ fontSize: '11px', color: 'var(--ink-body)', marginTop: '6px', lineHeight: 1.5 }}>
+              {activeDisplayMode === 'sandbox'
+                ? 'Calculated live from your custom sandbox species combination.'
+                : 'Baseline agronomic efficiency for this tropical agro-ecosystem.'}
+            </p>
           </div>
         </div>
 
-        {/* Metric bars */}
-        {ler > 0 && (
-          <div className="metric-bar-group">
-            <MetricBar label="N₂ Fixation" icon="🌱" value={nitrogenDelta} unit="kg/ha" fillClass="n2"
-              fillPct={Math.max(0, Math.min((nitrogenDelta + 50) / 150 * 100, 100))} />
-            <MetricBar label="Weed Suppression" icon="🌿" value={weedSuppression} unit="%" fillClass="weed"
-              fillPct={weedSuppression} />
-            <MetricBar label="Pest Resistance" icon="🛡" value={pestResistance} unit="%" fillClass="pest"
-              fillPct={pestResistance} />
-            <MetricBar label="Light Capture" icon="☀️" value={canopyPAR} unit="% PAR" fillClass="par"
-              fillPct={canopyPAR} />
-            <MetricBar label="Water Efficiency" icon="💧" value={waterEfficiency} unit="%" fillClass="water"
-              fillPct={waterEfficiency} />
-          </div>
-        )}
+        {/* Ecological Metric Bars */}
+        <div className="metric-bar-group">
+          <MetricBar
+            label="N₂ Soil Balance"
+            icon="🌱"
+            value={nitrogenDelta}
+            unit="kg/ha"
+            fillClass="n2"
+            fillPct={Math.max(0, Math.min((nitrogenDelta + 40) / 140 * 100, 100))}
+          />
+          <MetricBar
+            label="Weed Suppression"
+            icon="🌿"
+            value={weedSuppression}
+            unit="%"
+            fillClass="weed"
+            fillPct={weedSuppression}
+          />
+          <MetricBar
+            label="Pest Resistance"
+            icon="🛡️"
+            value={pestResistance}
+            unit="%"
+            fillClass="pest"
+            fillPct={pestResistance}
+          />
+          <MetricBar
+            label="Canopy Light (PAR)"
+            icon="☀️"
+            value={canopyPAR}
+            unit="%"
+            fillClass="par"
+            fillPct={canopyPAR}
+          />
+          <MetricBar
+            label="Water Retention"
+            icon="💧"
+            value={waterEfficiency}
+            unit="%"
+            fillClass="water"
+            fillPct={waterEfficiency}
+          />
+        </div>
+      </div>
 
-        {/* Synergies */}
-        {synergies.length > 0 && (
-          <div className="metric-synergy-list">
-            {synergies.slice(0, 4).map((s, i) => (
-              <div key={i} className="synergy-item" style={{ fontSize: '11px', color: 'var(--status-good)', lineHeight: 1.5 }}>
-                {s}
-              </div>
-            ))}
-          </div>
-        )}
+      {/* ─── Farmer Agronomic Advisories & Implications ─── */}
+      <div className="synergy-hud" style={{ gap: 'var(--space-3)' }}>
+        <div className="hud-title">
+          <span>👨‍🌾</span>
+          <span>Farmer Agronomic Advisories ({farmerAdvisories.length})</span>
+        </div>
 
-        {/* Warnings */}
-        {compatibilityWarnings.length > 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            {compatibilityWarnings.map((w, i) => (
-              <div key={i} className="compat-warning">
-                <span>⚠</span>
-                <span style={{ fontSize: '11px' }}>{w.replace('⚠ ', '')}</span>
-              </div>
+        {farmerAdvisories.length === 0 ? (
+          <p style={{ fontSize: '12px', color: 'var(--muted-soft)', fontStyle: 'italic', padding: '8px 0' }}>
+            No specific biological conflicts or companion rules triggered for this single species yet. Add companion crops or livestock to see operational advisories!
+          </p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {farmerAdvisories.map((adv: FarmerAdvisory) => (
+              <AdvisoryCard key={adv.id} advisory={adv} />
             ))}
           </div>
         )}
       </div>
-
-      {/* Farm-level baseline info when sandbox is empty */}
-      {ler === 0 && farm && (
-        <div className="synergy-hud" style={{ marginTop: '8px' }}>
-          <div className="hud-title">
-            <span>📊</span>
-            <span>Farm Baseline</span>
-          </div>
-          <div className="metric-bar-group">
-            <MetricBar label="System LER" icon="⚗️" value={farm.lerBaseline} unit="" fillClass="n2"
-              fillPct={Math.min(farm.lerBaseline / 2.5 * 100, 100)} />
-            <MetricBar label="N₂ Balance" icon="🌱" value={farm.nitrogenDelta} unit="kg/ha" fillClass="n2"
-              fillPct={Math.max(0, Math.min((farm.nitrogenDelta + 50) / 150 * 100, 100))} />
-            <MetricBar label="Weed Suppression" icon="🌿" value={farm.weedSuppressionPct} unit="%" fillClass="weed"
-              fillPct={farm.weedSuppressionPct} />
-            <MetricBar label="Pest Resistance" icon="🛡" value={farm.pestResistancePct} unit="%" fillClass="pest"
-              fillPct={farm.pestResistancePct} />
-          </div>
-        </div>
-      )}
     </aside>
+  );
+}
+
+function AdvisoryCard({ advisory }: { advisory: FarmerAdvisory }) {
+  const isWarning = advisory.type === 'warning';
+  const isSynergy = advisory.type === 'synergy';
+  const isCalendar = advisory.type === 'calendar';
+
+  const borderColor = isWarning
+    ? 'rgba(239, 68, 68, 0.4)'
+    : isSynergy
+      ? 'rgba(52, 211, 153, 0.4)'
+      : isCalendar
+        ? 'rgba(56, 189, 248, 0.4)'
+        : 'rgba(245, 158, 11, 0.4)';
+
+  const badgeClass = isWarning
+    ? 'tag-amber'
+    : isSynergy
+      ? 'tag-green'
+      : 'tag-amber';
+
+  const badgeText = isWarning
+    ? '🚨 Operational Warning'
+    : isSynergy
+      ? '✨ High Synergy'
+      : isCalendar
+        ? '📅 Planting Schedule'
+        : '💡 Management Tip';
+
+  return (
+    <div
+      className="advisory-card"
+      style={{
+        padding: '12px 14px',
+        borderRadius: 'var(--r-md)',
+        background: 'var(--surface-sunk)',
+        border: `1px solid ${borderColor}`,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '6px',
+        boxShadow: 'var(--shadow-sm)',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
+        <h5 style={{ fontSize: '13px', fontWeight: 700, color: 'var(--ink-strong)', lineHeight: 1.3 }}>
+          {advisory.title}
+        </h5>
+        <span className={`tag ${badgeClass}`} style={{ fontSize: '9px', flexShrink: 0 }}>
+          {badgeText}
+        </span>
+      </div>
+
+      <p style={{ fontSize: '12px', color: 'var(--ink-body)', lineHeight: 1.6 }}>
+        {advisory.description}
+      </p>
+
+      <div
+        style={{
+          marginTop: '4px',
+          padding: '8px 10px',
+          borderRadius: 'var(--r-sm)',
+          background: 'var(--surface-raised)',
+          border: '1px solid var(--border)',
+          fontSize: '11px',
+          color: 'var(--ink)',
+          lineHeight: 1.5,
+        }}
+      >
+        <strong style={{ color: 'var(--muted)', display: 'block', marginBottom: '2px' }}>
+          Recommended Farmer Action:
+        </strong>
+        {advisory.actionableTip}
+      </div>
+    </div>
   );
 }
 
@@ -156,7 +242,7 @@ function MetricBar({
         </span>
         <span className="metric-bar-value">
           {typeof value === 'number' && value % 1 !== 0
-            ? value.toFixed(2)
+            ? value.toFixed(1)
             : Math.round(value)
           }{unit ? ` ${unit}` : ''}
         </span>

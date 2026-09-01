@@ -16,6 +16,7 @@ const DEFAULT_SIMULATION: IntercroppingResult = {
   waterEfficiency: 0,
   compatibilityWarnings: [],
   synergies: [],
+  farmerAdvisories: [],
 };
 
 interface AtlasActions {
