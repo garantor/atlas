@@ -38,6 +38,7 @@ interface AtlasActions {
   setQuizOpen: (open: boolean) => void;
   setCardDetail: (id: string | null) => void;
   setBiomeFilter: (biome: BiomeZone | 'all') => void;
+  setFarmShape: (shape: 'square' | 'circle') => void;
   toggleLayer: (layer: keyof AtlasState['layerFilters']) => void;
 }
 
@@ -52,6 +53,7 @@ export const useAtlas = create<AtlasState & AtlasActions>((set, get) => ({
   // ─── State ─────────────────────────────────────────────────────────────────
   selectedFarmId: 'cocoa-agroforest',
   activeDisplayMode: 'farm',
+  farmShape: 'square',
   viewState: 'macro',
   activeHotspotId: null,
   season: 'wet',
@@ -148,6 +150,7 @@ export const useAtlas = create<AtlasState & AtlasActions>((set, get) => ({
   setQuizOpen: (open) => set({ quizOpen: open }),
   setCardDetail: (id) => set({ cardDetailId: id }),
   setBiomeFilter: (biome) => set({ biomeFilter: biome }),
+  setFarmShape: (shape) => set({ farmShape: shape }),
 
   toggleLayer: (layer) =>
     set(state => ({

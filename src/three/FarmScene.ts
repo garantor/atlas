@@ -176,6 +176,10 @@ export class FarmScene {
     });
   }
 
+  setFarmShape(shape: 'square' | 'circle') {
+    this.farmRenderer.setFarmShape(shape);
+  }
+
   setSeason(season: Season) {
     this.farmRenderer.setSeason(season);
   }

@@ -1,6 +1,7 @@
 /**
  * Farm Atlas — FarmRenderer
- * Museum-grade lighting rig, pristine PBR diorama pedestal, and studio atmosphere.
+ * Museum-grade lighting rig, configurable Square / Circle 1-Ha farm pedestal,
+ * PBR soil stratigraphy, and atmospheric studio environment.
  */
 
 import * as THREE from 'three';
@@ -18,14 +19,17 @@ export class FarmRenderer {
   private fillLight: THREE.HemisphereLight;
   private rimLight: THREE.DirectionalLight;
 
-  // Stylized Diorama Pedestal Plot
+  // Plot Pedestal Meshes
   private islandMesh: THREE.Mesh;
   private islandRim: THREE.Mesh;
+  private boundaryHedge: THREE.Group;
   private shadowPlane: THREE.Mesh;
 
+  private currentShape: 'square' | 'circle' = 'square';
   private currentSeason: Season = 'wet';
   private currentHour = 10;
   private currentTheme: 'light' | 'dark' = 'dark';
+  private currentBiomeColor = 0x15803d;
 
   constructor(scene: THREE.Scene, renderer: THREE.WebGLRenderer) {
     this.scene = scene;
@@ -38,17 +42,17 @@ export class FarmRenderer {
     this.sunLight.shadow.mapSize.set(2048, 2048);
     this.sunLight.shadow.camera.near = 0.5;
     this.sunLight.shadow.camera.far = 70;
-    this.sunLight.shadow.camera.left = -15;
-    this.sunLight.shadow.camera.right = 15;
-    this.sunLight.shadow.camera.top = 15;
-    this.sunLight.shadow.camera.bottom = -15;
+    this.sunLight.shadow.camera.left = -16;
+    this.sunLight.shadow.camera.right = 16;
+    this.sunLight.shadow.camera.top = 16;
+    this.sunLight.shadow.camera.bottom = -16;
     this.sunLight.shadow.bias = -0.0004;
     this.sunLight.shadow.radius = 2.8;
     scene.add(this.sunLight);
 
     // ─── 2. Sky & Ambient Fill (Soft Diffuse Bounce) ──────────────────────────
     this.fillLight = new THREE.HemisphereLight(
-      0xbae6fd,  // pristine soft sky blue
+      0xbae6fd,  // soft sky blue
       0x14532d,  // rich forest ground bounce
       0.95
     );
@@ -62,9 +66,7 @@ export class FarmRenderer {
     this.rimLight.position.set(-12, 14, -14);
     scene.add(this.rimLight);
 
-    // ─── 4. Pristine PBR Diorama Pedestal with Organic Soil Texture ──────────
-    const islandGeo = new THREE.CylinderGeometry(8.2, 8.4, 0.6, 64);
-    islandGeo.computeVertexNormals();
+    // ─── 4. Pedestal Placeholder & Soft Shadow ───────────────────────────────
     const soilTex = getSoilTexture(0x15803d);
     const islandMat = getCleanPBR({
       map: soilTex.map,
@@ -74,26 +76,25 @@ export class FarmRenderer {
       clearcoat: 0.15,
       clearcoatRoughness: 0.2,
     });
-    this.islandMesh = new THREE.Mesh(islandGeo, islandMat);
-    this.islandMesh.position.y = -0.3;
-    this.islandMesh.receiveShadow = true;
-    scene.add(this.islandMesh);
-
-    // Soil Stratified Rim
-    const rimGeo = new THREE.CylinderGeometry(8.4, 7.6, 1.2, 64);
-    rimGeo.computeVertexNormals();
     const rimMat = getCleanPBR({
       color: 0x451a03,
       roughness: 0.9,
       clearcoat: 0.05,
     });
-    this.islandRim = new THREE.Mesh(rimGeo, rimMat);
-    this.islandRim.position.y = -1.1;
+
+    this.islandMesh = new THREE.Mesh(new THREE.BufferGeometry(), islandMat);
+    this.islandMesh.receiveShadow = true;
+    scene.add(this.islandMesh);
+
+    this.islandRim = new THREE.Mesh(new THREE.BufferGeometry(), rimMat);
     this.islandRim.receiveShadow = true;
     scene.add(this.islandRim);
 
-    // Soft Radial Contact Shadow Plane
-    const shadowGeo = new THREE.PlaneGeometry(22, 22);
+    this.boundaryHedge = new THREE.Group();
+    scene.add(this.boundaryHedge);
+
+    // Soft Contact Shadow Plane
+    const shadowGeo = new THREE.PlaneGeometry(24, 24);
     const shadowMat = new THREE.MeshBasicMaterial({
       color: 0x000000,
       transparent: true,
@@ -105,8 +106,70 @@ export class FarmRenderer {
     this.shadowPlane.position.y = -1.72;
     scene.add(this.shadowPlane);
 
+    // Build default Square Farm
+    this.setFarmShape('square');
     this.setTheme('dark');
     this.setTimeOfDay(10);
+  }
+
+  /**
+   * Dynamically build a Square 1-Hectare Farm Pedestal or Circular Diorama
+   */
+  setFarmShape(shape: 'square' | 'circle') {
+    this.currentShape = shape;
+
+    // Dispose old geometries
+    this.islandMesh.geometry.dispose();
+    this.islandRim.geometry.dispose();
+    while (this.boundaryHedge.children.length > 0) {
+      this.boundaryHedge.remove(this.boundaryHedge.children[0]);
+    }
+
+    if (shape === 'square') {
+      // 1. Topsoil 1-Ha Cadastral Square Block (13.5m x 13.5m)
+      const topGeo = new THREE.BoxGeometry(13.5, 0.6, 13.5);
+      topGeo.computeVertexNormals();
+      this.islandMesh.geometry = topGeo;
+      this.islandMesh.position.set(0, -0.3, 0);
+
+      // 2. Stratified Subterranean Bedrock Base
+      const rimGeo = new THREE.BoxGeometry(13.2, 1.2, 13.2);
+      rimGeo.computeVertexNormals();
+      this.islandRim.geometry = rimGeo;
+      this.islandRim.position.set(0, -1.1, 0);
+
+      // 3. Perimeter Alley Markers / Boundary Drainage Ridge
+      const hedgeMat = getCleanPBR({ color: 0x14532d, roughness: 0.6, clearcoat: 0.2 });
+      const edgeLen = 13.6;
+      const hedgeThickness = 0.15;
+      const hedgeH = 0.12;
+
+      // 4 perimeter curbs
+      const hedges = [
+        { w: edgeLen, d: hedgeThickness, x: 0, z: 6.75 },
+        { w: edgeLen, d: hedgeThickness, x: 0, z: -6.75 },
+        { w: hedgeThickness, d: edgeLen, x: 6.75, z: 0 },
+        { w: hedgeThickness, d: edgeLen, x: -6.75, z: 0 },
+      ];
+
+      hedges.forEach(h => {
+        const hMesh = new THREE.Mesh(new THREE.BoxGeometry(h.w, hedgeH, h.d), hedgeMat);
+        hMesh.position.set(h.x, 0.02, h.z);
+        hMesh.receiveShadow = true;
+        this.boundaryHedge.add(hMesh);
+      });
+    } else {
+      // Circular Ecological Diorama
+      const topGeo = new THREE.CylinderGeometry(8.2, 8.4, 0.6, 64);
+      topGeo.computeVertexNormals();
+      this.islandMesh.geometry = topGeo;
+      this.islandMesh.position.set(0, -0.3, 0);
+
+      const rimGeo = new THREE.CylinderGeometry(8.4, 7.6, 1.2, 64);
+      rimGeo.computeVertexNormals();
+      this.islandRim.geometry = rimGeo;
+      this.islandRim.position.set(0, -1.1, 0);
+    }
   }
 
   setFarmEnvironment(farm: FarmEcosystem, theme: 'light' | 'dark') {
@@ -124,9 +187,9 @@ export class FarmRenderer {
       'aquatic': 0x0369a1,
     };
 
-    const gc = groundColors[farm.biome] || 0x15803d;
+    this.currentBiomeColor = groundColors[farm.biome] || 0x15803d;
     (this.islandMesh.material as THREE.MeshPhysicalMaterial).color.setHex(
-      isWet ? gc : this.lightenHex(gc, 0.3)
+      isWet ? this.currentBiomeColor : this.lightenHex(this.currentBiomeColor, 0.3)
     );
   }
 
@@ -136,7 +199,7 @@ export class FarmRenderer {
       this.fillLight.color.setHex(0xbae6fd);
       this.sunLight.color.setHex(0xfff7ed);
       this.sunLight.intensity = 3.0;
-      (this.islandMesh.material as THREE.MeshPhysicalMaterial).color.setHex(0x15803d);
+      (this.islandMesh.material as THREE.MeshPhysicalMaterial).color.setHex(this.currentBiomeColor);
     } else {
       this.fillLight.color.setHex(0xfde047);
       this.sunLight.color.setHex(0xfef08a);

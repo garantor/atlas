@@ -27,8 +27,8 @@ export function FarmViewer() {
   const farm = useSelectedFarm();
   const {
     viewState, season, timeOfDay, theme, layerFilters,
-    activeDisplayMode, sandboxCropIds, sandboxLivestockIds,
-    setDisplayMode, setActiveHotspot, toggleLayer
+    activeDisplayMode, sandboxCropIds, sandboxLivestockIds, farmShape,
+    setDisplayMode, setActiveHotspot, toggleLayer, setFarmShape
   } = useAtlas();
 
   const [loading, setLoading] = useState(true);
@@ -43,6 +43,7 @@ export function FarmViewer() {
       onHotspotPositions: (positions) => setHotspotPositions(new Map(positions)),
     });
     sceneRef.current = scene;
+    scene.setFarmShape(farmShape);
     setLoading(false);
 
     return () => {
@@ -65,6 +66,11 @@ export function FarmViewer() {
     const timer = setTimeout(() => setLoading(false), 200);
     return () => clearTimeout(timer);
   }, [activeDisplayMode, farm?.id, sandboxCropIds.length, sandboxLivestockIds.length, theme]);
+
+  // Sync farm shape (Square 1-Ha Plot vs Circular Diorama)
+  useEffect(() => {
+    sceneRef.current?.setFarmShape(farmShape);
+  }, [farmShape]);
 
   // Sync view state
   useEffect(() => {
@@ -116,51 +122,81 @@ export function FarmViewer() {
         </div>
       )}
 
-      {/* Active Mode Badge (Top Left) */}
-      <div className="viewer-mode-badge" style={{
+      {/* Active Mode Badge & Plot Geometry Switcher (Top Left) */}
+      <div style={{
         position: 'absolute',
         top: 'var(--space-4)',
         left: 'var(--space-4)',
         zIndex: 10,
         display: 'flex',
         alignItems: 'center',
-        gap: '6px',
-        background: 'var(--glass)',
-        backdropFilter: 'blur(16px)',
-        WebkitBackdropFilter: 'blur(16px)',
-        border: '1px solid var(--border-strong)',
-        borderRadius: 'var(--r-full)',
-        padding: '5px 12px',
-        boxShadow: 'var(--shadow-card)',
-        fontSize: '11px',
-        fontWeight: 600,
+        gap: '8px',
       }}>
-        <span style={{ fontSize: '13px' }}>
-          {activeDisplayMode === 'sandbox' ? '🧪' : '🌿'}
-        </span>
-        <span style={{ color: 'var(--ink-strong)' }}>
-          {activeDisplayMode === 'sandbox'
-            ? `Sandbox (${sandboxCropIds.length + sandboxLivestockIds.length} Species)`
-            : (farm?.name || 'Agroforest')}
-        </span>
-        {activeDisplayMode === 'sandbox' && (
-          <button
-            onClick={() => setDisplayMode('farm')}
-            style={{
-              marginLeft: '4px',
-              fontSize: '10px',
-              padding: '2px 8px',
-              borderRadius: 'var(--r-full)',
-              background: 'var(--surface-raised)',
-              border: '1px solid var(--border)',
-              color: 'var(--muted)',
-              cursor: 'pointer',
-            }}
-            title="Switch back to standard farm preset"
-          >
-            Reset ↺
-          </button>
-        )}
+        <div className="viewer-mode-badge" style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+          background: 'var(--glass)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          border: '1px solid var(--border-strong)',
+          borderRadius: 'var(--r-full)',
+          padding: '5px 12px',
+          boxShadow: 'var(--shadow-card)',
+          fontSize: '11px',
+          fontWeight: 600,
+        }}>
+          <span style={{ fontSize: '13px' }}>
+            {activeDisplayMode === 'sandbox' ? '🧪' : '🌿'}
+          </span>
+          <span style={{ color: 'var(--ink-strong)' }}>
+            {activeDisplayMode === 'sandbox'
+              ? `Sandbox (${sandboxCropIds.length + sandboxLivestockIds.length} Species)`
+              : (farm?.name || 'Agroforest')}
+          </span>
+          {activeDisplayMode === 'sandbox' && (
+            <button
+              onClick={() => setDisplayMode('farm')}
+              style={{
+                marginLeft: '4px',
+                fontSize: '10px',
+                padding: '2px 8px',
+                borderRadius: 'var(--r-full)',
+                background: 'var(--surface-raised)',
+                border: '1px solid var(--border)',
+                color: 'var(--muted)',
+                cursor: 'pointer',
+              }}
+              title="Switch back to standard farm preset"
+            >
+              Reset ↺
+            </button>
+          )}
+        </div>
+
+        {/* Plot Cadastral Shape Toggle (Square / Circle) */}
+        <button
+          onClick={() => setFarmShape(farmShape === 'square' ? 'circle' : 'square')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '5px',
+            background: 'var(--glass)',
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            border: '1px solid var(--border-strong)',
+            borderRadius: 'var(--r-full)',
+            padding: '5px 10px',
+            fontSize: '11px',
+            fontWeight: 600,
+            color: 'var(--ink-strong)',
+            cursor: 'pointer',
+            boxShadow: 'var(--shadow-card)',
+          }}
+          title={farmShape === 'square' ? 'Switch to Circular Diorama' : 'Switch to 1-Hectare Square Plot'}
+        >
+          <span>{farmShape === 'square' ? '⏹ 1-Ha Square Plot' : '⏺ Circular Diorama'}</span>
+        </button>
       </div>
 
       {/* View state selector (top center) */}

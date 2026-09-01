@@ -179,6 +179,7 @@ export interface AtlasState {
   timeOfDay: number;                  // 0–24
   theme: 'light' | 'dark';
   activeDisplayMode: 'farm' | 'sandbox';
+  farmShape: 'square' | 'circle';
   sandboxCropIds: string[];
   sandboxLivestockIds: string[];
   simulationResult: IntercroppingResult;
