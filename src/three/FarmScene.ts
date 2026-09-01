@@ -96,7 +96,6 @@ export class FarmScene {
 
   /** Load and render a specific farm ecosystem */
   loadFarm(farm: FarmEcosystem, theme: 'light' | 'dark') {
-    if (this.currentFarmId === farm.id) return;
     this.currentFarmId = farm.id;
 
     this.farmBuilder.clear();
@@ -108,6 +107,18 @@ export class FarmScene {
     this.particleCycles.buildFlows(farm);
     this.farmRenderer.setFarmEnvironment(farm, theme);
 
+    this.flyToPreset('overview');
+  }
+
+  /** Dynamically render custom sandbox configuration in 3D display */
+  loadCustomConfiguration(cropIds: string[], livestockIds: string[], _theme: 'light' | 'dark') {
+    this.currentFarmId = 'custom-sandbox';
+
+    this.farmBuilder.clear();
+    this.hotspotManager.clear();
+    this.particleCycles.clear();
+
+    this.farmBuilder.buildCustom(cropIds, livestockIds);
     this.flyToPreset('overview');
   }
 

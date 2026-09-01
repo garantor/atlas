@@ -31,6 +31,7 @@ interface AtlasActions {
   removeSandboxLivestock: (id: string) => void;
   clearSandbox: () => void;
   loadFarmIntoSandbox: () => void;
+  setDisplayMode: (mode: 'farm' | 'sandbox') => void;
   setSearchOpen: (open: boolean) => void;
   setLessonOpen: (open: boolean) => void;
   setQuizOpen: (open: boolean) => void;
@@ -49,6 +50,7 @@ const getInitialTheme = (): 'light' | 'dark' => {
 export const useAtlas = create<AtlasState & AtlasActions>((set, get) => ({
   // ─── State ─────────────────────────────────────────────────────────────────
   selectedFarmId: 'cocoa-agroforest',
+  activeDisplayMode: 'farm',
   viewState: 'macro',
   activeHotspotId: null,
   season: 'wet',
@@ -72,7 +74,9 @@ export const useAtlas = create<AtlasState & AtlasActions>((set, get) => ({
   },
 
   // ─── Actions ───────────────────────────────────────────────────────────────
-  selectFarm: (id) => set({ selectedFarmId: id, activeHotspotId: null }),
+  selectFarm: (id) => set({ selectedFarmId: id, activeDisplayMode: 'farm', activeHotspotId: null }),
+
+  setDisplayMode: (mode) => set({ activeDisplayMode: mode }),
 
   setViewState: (state) => set({ viewState: state }),
 
@@ -93,14 +97,14 @@ export const useAtlas = create<AtlasState & AtlasActions>((set, get) => ({
     if (sandboxCropIds.includes(id)) return;
     const newCropIds = [...sandboxCropIds, id];
     const result = simulateIntercropping(newCropIds, sandboxLivestockIds);
-    set({ sandboxCropIds: newCropIds, simulationResult: result });
+    set({ sandboxCropIds: newCropIds, simulationResult: result, activeDisplayMode: 'sandbox' });
   },
 
   removeSandboxCrop: (id) => {
     const { sandboxCropIds, sandboxLivestockIds } = get();
     const newCropIds = sandboxCropIds.filter(c => c !== id);
     const result = simulateIntercropping(newCropIds, sandboxLivestockIds);
-    set({ sandboxCropIds: newCropIds, simulationResult: result });
+    set({ sandboxCropIds: newCropIds, simulationResult: result, activeDisplayMode: 'sandbox' });
   },
 
   addSandboxLivestock: (id) => {
@@ -108,20 +112,21 @@ export const useAtlas = create<AtlasState & AtlasActions>((set, get) => ({
     if (sandboxLivestockIds.includes(id)) return;
     const newLivestockIds = [...sandboxLivestockIds, id];
     const result = simulateIntercropping(sandboxCropIds, newLivestockIds);
-    set({ sandboxLivestockIds: newLivestockIds, simulationResult: result });
+    set({ sandboxLivestockIds: newLivestockIds, simulationResult: result, activeDisplayMode: 'sandbox' });
   },
 
   removeSandboxLivestock: (id) => {
     const { sandboxCropIds, sandboxLivestockIds } = get();
     const newLivestockIds = sandboxLivestockIds.filter(l => l !== id);
     const result = simulateIntercropping(sandboxCropIds, newLivestockIds);
-    set({ sandboxLivestockIds: newLivestockIds, simulationResult: result });
+    set({ sandboxLivestockIds: newLivestockIds, simulationResult: result, activeDisplayMode: 'sandbox' });
   },
 
   clearSandbox: () => set({
     sandboxCropIds: [],
     sandboxLivestockIds: [],
     simulationResult: DEFAULT_SIMULATION,
+    activeDisplayMode: 'farm',
   }),
 
   loadFarmIntoSandbox: () => {
@@ -133,6 +138,7 @@ export const useAtlas = create<AtlasState & AtlasActions>((set, get) => ({
       sandboxCropIds: farm.cropIds,
       sandboxLivestockIds: farm.livestockIds,
       simulationResult: result,
+      activeDisplayMode: 'sandbox',
     });
   },
 

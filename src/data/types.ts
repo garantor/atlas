@@ -168,6 +168,7 @@ export interface AtlasState {
   season: Season;
   timeOfDay: number;                  // 0–24
   theme: 'light' | 'dark';
+  activeDisplayMode: 'farm' | 'sandbox';
   sandboxCropIds: string[];
   sandboxLivestockIds: string[];
   simulationResult: IntercroppingResult;

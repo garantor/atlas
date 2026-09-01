@@ -22,6 +22,7 @@ export function IntercroppingSandbox() {
     addSandboxCrop, removeSandboxCrop,
     addSandboxLivestock, removeSandboxLivestock,
     clearSandbox, loadFarmIntoSandbox,
+    activeDisplayMode, setDisplayMode,
     simulationResult,
   } = useAtlas();
 
@@ -43,21 +44,72 @@ export function IntercroppingSandbox() {
     }).filter(Boolean),
   ].filter(Boolean);
 
+  const totalConfigured = sandboxCropIds.length + sandboxLivestockIds.length;
+
   return (
     <div className="sandbox-wrap">
       <div className="sandbox-header">
-        <h3>🧪 Intercropping Sandbox</h3>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button className="btn btn-ghost btn-sm" onClick={loadFarmIntoSandbox} id="load-farm-btn">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <h3>🧪 Intercropping Sandbox</h3>
+          {totalConfigured > 0 && (
+            <span className="tag tag-green" style={{ fontSize: '9px' }}>
+              {totalConfigured} Live in 3D
+            </span>
+          )}
+        </div>
+        <div style={{ display: 'flex', gap: '6px' }}>
+          <button
+            className="btn btn-ghost btn-sm"
+            onClick={loadFarmIntoSandbox}
+            id="load-farm-btn"
+            title="Import current ecosystem species into sandbox"
+          >
             Load Farm
           </button>
-          <button className="btn btn-ghost btn-sm" onClick={clearSandbox} id="clear-sandbox-btn">
+          <button
+            className="btn btn-ghost btn-sm"
+            onClick={clearSandbox}
+            id="clear-sandbox-btn"
+            title="Clear all sandbox crops"
+          >
             Clear
           </button>
         </div>
       </div>
 
-      {/* Field visualisation */}
+      {/* 3D Sync Banner */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '6px 12px',
+        borderRadius: 'var(--r-md)',
+        background: activeDisplayMode === 'sandbox' ? 'var(--green-wash)' : 'var(--surface-sunk)',
+        border: `1px solid ${activeDisplayMode === 'sandbox' ? 'var(--green-muted)' : 'var(--border)'}`,
+        fontSize: '11px',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <span style={{ color: activeDisplayMode === 'sandbox' ? 'var(--status-good)' : 'var(--muted)' }}>
+            {activeDisplayMode === 'sandbox' ? '● Live 3D Sync Active' : '○ Showing Farm Preset'}
+          </span>
+        </div>
+        {activeDisplayMode !== 'sandbox' && totalConfigured > 0 && (
+          <button
+            onClick={() => setDisplayMode('sandbox')}
+            style={{
+              fontSize: '10px',
+              fontWeight: 700,
+              color: 'var(--green-light)',
+              textDecoration: 'underline',
+              cursor: 'pointer',
+            }}
+          >
+            Show Sandbox in 3D →
+          </button>
+        )}
+      </div>
+
+      {/* Field visualisation grid */}
       <div className="sandbox-field" aria-label="Farm plot grid">
         {Array.from({ length: MAX_PLOT_CELLS }).map((_, idx) => {
           const item = plotItems[idx];
@@ -78,14 +130,14 @@ export function IntercroppingSandbox() {
           }
           return (
             <div key={idx} className="sandbox-plot" aria-label="Empty plot cell">
-              <span style={{ fontSize: '18px', opacity: 0.3 }}>+</span>
-              <span style={{ fontSize: '9px', opacity: 0.3 }}>Add crop</span>
+              <span style={{ fontSize: '16px', opacity: 0.35 }}>+</span>
+              <span style={{ fontSize: '9px', opacity: 0.35 }}>Add species</span>
             </div>
           );
         })}
       </div>
 
-      {/* Compatibility feedback */}
+      {/* Compatibility & Synergy feedback */}
       {simulationResult.compatibilityWarnings.length > 0 && (
         <div className="compat-warning">
           <span>⚠</span>
@@ -103,15 +155,15 @@ export function IntercroppingSandbox() {
         </div>
       )}
 
-      {/* Tabs: Crops / Livestock */}
-      <div style={{ display: 'flex', gap: '4px', marginTop: '4px' }}>
+      {/* Tabs: Crops / Fauna */}
+      <div style={{ display: 'flex', gap: '4px', marginTop: '2px' }}>
         <button
           id="tab-crops"
           className={`biome-tab ${activeTab === 'crops' ? 'active' : ''}`}
           style={{ flex: 1 }}
           onClick={() => setActiveTab('crops')}
         >
-          🌱 Crops
+          🌱 Crops ({sandboxCropIds.length})
         </button>
         <button
           id="tab-livestock"
@@ -119,14 +171,13 @@ export function IntercroppingSandbox() {
           style={{ flex: 1 }}
           onClick={() => setActiveTab('livestock')}
         >
-          🐐 Fauna
+          🐐 Fauna ({sandboxLivestockIds.length})
         </button>
       </div>
 
       {/* Crop palette */}
       {activeTab === 'crops' && (
         <div className="crop-palette">
-          {/* Category filter */}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '4px' }}>
             <button
               className={`biome-tab ${activeCat === 'all' ? 'active' : ''}`}
@@ -154,7 +205,7 @@ export function IntercroppingSandbox() {
                   id={`crop-chip-${crop.id}`}
                   className={`crop-chip ${isSelected ? 'selected' : ''}`}
                   onClick={() => isSelected ? removeSandboxCrop(crop.id) : addSandboxCrop(crop.id)}
-                  title={crop.scientificName}
+                  title={`${crop.scientificName} — Click to toggle on 3D island`}
                   aria-pressed={isSelected}
                 >
                   <span className="crop-chip-icon">{crop.icon}</span>
@@ -178,7 +229,7 @@ export function IntercroppingSandbox() {
                   id={`livestock-chip-${animal.id}`}
                   className={`crop-chip ${isSelected ? 'selected' : ''}`}
                   onClick={() => isSelected ? removeSandboxLivestock(animal.id) : addSandboxLivestock(animal.id)}
-                  title={animal.scientificName}
+                  title={`${animal.scientificName} — Click to toggle on 3D island`}
                   aria-pressed={isSelected}
                 >
                   <span className="crop-chip-icon">{animal.icon}</span>

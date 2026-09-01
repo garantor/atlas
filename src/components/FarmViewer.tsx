@@ -25,7 +25,11 @@ export function FarmViewer() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const sceneRef = useRef<FarmScene | null>(null);
   const farm = useSelectedFarm();
-  const { viewState, season, timeOfDay, theme, layerFilters, setActiveHotspot, toggleLayer } = useAtlas();
+  const {
+    viewState, season, timeOfDay, theme, layerFilters,
+    activeDisplayMode, sandboxCropIds, sandboxLivestockIds,
+    setDisplayMode, setActiveHotspot, toggleLayer
+  } = useAtlas();
 
   const [loading, setLoading] = useState(true);
   const [hotspotPositions, setHotspotPositions] = useState<Map<string, { x: number; y: number; visible: boolean }>>(new Map());
@@ -47,13 +51,20 @@ export function FarmViewer() {
     };
   }, []);
 
-  // Load farm when selection changes
+  // Update 3D display whenever active display mode or farm or sandbox changes
   useEffect(() => {
-    if (!sceneRef.current || !farm) return;
+    if (!sceneRef.current) return;
     setLoading(true);
-    sceneRef.current.loadFarm(farm, theme);
-    setTimeout(() => setLoading(false), 250);
-  }, [farm?.id]);
+
+    if (activeDisplayMode === 'sandbox') {
+      sceneRef.current.loadCustomConfiguration(sandboxCropIds, sandboxLivestockIds, theme);
+    } else if (farm) {
+      sceneRef.current.loadFarm(farm, theme);
+    }
+
+    const timer = setTimeout(() => setLoading(false), 200);
+    return () => clearTimeout(timer);
+  }, [activeDisplayMode, farm?.id, sandboxCropIds.length, sandboxLivestockIds.length, theme]);
 
   // Sync view state
   useEffect(() => {
@@ -97,9 +108,60 @@ export function FarmViewer() {
       {loading && (
         <div className="viewer-loading" role="status" aria-label="Loading farm">
           <span className="viewer-loading-icon">🌿</span>
-          <p>Generating 3D agro-ecosystem…</p>
+          <p>
+            {activeDisplayMode === 'sandbox'
+              ? 'Rendering configured polyculture in 3D…'
+              : 'Generating 3D agro-ecosystem…'}
+          </p>
         </div>
       )}
+
+      {/* Active Mode Badge (Top Left) */}
+      <div className="viewer-mode-badge" style={{
+        position: 'absolute',
+        top: 'var(--space-4)',
+        left: 'var(--space-4)',
+        zIndex: 10,
+        display: 'flex',
+        alignItems: 'center',
+        gap: '6px',
+        background: 'var(--glass)',
+        backdropFilter: 'blur(16px)',
+        WebkitBackdropFilter: 'blur(16px)',
+        border: '1px solid var(--border-strong)',
+        borderRadius: 'var(--r-full)',
+        padding: '5px 12px',
+        boxShadow: 'var(--shadow-card)',
+        fontSize: '11px',
+        fontWeight: 600,
+      }}>
+        <span style={{ fontSize: '13px' }}>
+          {activeDisplayMode === 'sandbox' ? '🧪' : '🌿'}
+        </span>
+        <span style={{ color: 'var(--ink-strong)' }}>
+          {activeDisplayMode === 'sandbox'
+            ? `Sandbox (${sandboxCropIds.length + sandboxLivestockIds.length} Species)`
+            : (farm?.name || 'Agroforest')}
+        </span>
+        {activeDisplayMode === 'sandbox' && (
+          <button
+            onClick={() => setDisplayMode('farm')}
+            style={{
+              marginLeft: '4px',
+              fontSize: '10px',
+              padding: '2px 8px',
+              borderRadius: 'var(--r-full)',
+              background: 'var(--surface-raised)',
+              border: '1px solid var(--border)',
+              color: 'var(--muted)',
+              cursor: 'pointer',
+            }}
+            title="Switch back to standard farm preset"
+          >
+            Reset ↺
+          </button>
+        )}
+      </div>
 
       {/* View state selector (top center) */}
       <ViewStateSelector />
@@ -140,8 +202,8 @@ export function FarmViewer() {
         </div>
       </div>
 
-      {/* Hotspot overlay */}
-      {farm && (
+      {/* Hotspot overlay (visible in farm preset mode) */}
+      {farm && activeDisplayMode === 'farm' && (
         <HotspotCallouts
           hotspots={farm.hotspots}
           positions={hotspotPositions}
