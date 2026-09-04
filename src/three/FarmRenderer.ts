@@ -21,7 +21,7 @@ export class FarmRenderer {
   private rimLight: THREE.DirectionalLight;
 
   // Sky Atmosphere Dome
-  private skyDome: THREE.Mesh | null = null;
+  public skyDome: THREE.Mesh | null = null;
 
   // Plot Pedestal Meshes
   private islandMesh: THREE.Mesh;
@@ -30,6 +30,7 @@ export class FarmRenderer {
   private shadowPlane: THREE.Mesh;
 
   private currentShape: 'square' | 'circle' = 'square';
+  private currentAcreage = 2.47;
   private currentSeason: Season = 'wet';
   private currentHour = 10;
   private currentTheme: 'light' | 'dark' = 'dark';
@@ -45,7 +46,7 @@ export class FarmRenderer {
     this.sunLight.castShadow = true;
     this.sunLight.shadow.mapSize.set(2048, 2048);
     this.sunLight.shadow.camera.near = 0.5;
-    this.sunLight.shadow.camera.far = 70;
+    this.sunLight.shadow.camera.far = 120;
     this.sunLight.shadow.camera.left = -16;
     this.sunLight.shadow.camera.right = 16;
     this.sunLight.shadow.camera.top = 16;
@@ -116,7 +117,7 @@ export class FarmRenderer {
     scene.add(this.shadowPlane);
 
     // Build default Square Farm
-    this.setFarmShape('square');
+    this.setFarmShape('square', 2.47);
     this.setTheme('dark');
     this.setTimeOfDay(10);
   }
@@ -125,7 +126,7 @@ export class FarmRenderer {
    * Atmospheric Sky Dome Shader with realistic Rayleigh-like gradient & horizon haze
    */
   private createAtmosphericSkyDome() {
-    const skyGeo = new THREE.SphereGeometry(95, 32, 24);
+    const skyGeo = new THREE.SphereGeometry(1200, 32, 24);
     const skyMat = new THREE.ShaderMaterial({
       uniforms: {
         uZenithColor: { value: new THREE.Color(0x0f172a) },
@@ -168,6 +169,7 @@ export class FarmRenderer {
     });
 
     this.skyDome = new THREE.Mesh(skyGeo, skyMat);
+    this.skyDome.frustumCulled = false;
     this.scene.add(this.skyDome);
   }
 
@@ -176,10 +178,25 @@ export class FarmRenderer {
   }
 
   /**
-   * Dynamically build a Square 1-Hectare Farm Pedestal or Circular Diorama
+   * Calculate physical diorama footprint size based on configured farm acreage
    */
-  setFarmShape(shape: 'square' | 'circle') {
+  getEstateDimension(acreage = this.currentAcreage): number {
+    if (acreage <= 5) return 13.5;
+    if (acreage <= 40) return 24.0;
+    if (acreage <= 150) return 36.0;
+    if (acreage <= 2000) return 52.0;
+    return 72.0; // Concession scale (e.g. 10,000 to 1,000,000 acres)
+  }
+
+  /**
+   * Dynamically build a Square 1-Hectare Farm Pedestal or Circular Diorama,
+   * scaling footprint dimensions and shadow frustum to the configured acreage.
+   */
+  setFarmShape(shape: 'square' | 'circle', acreage?: number) {
     this.currentShape = shape;
+    if (acreage !== undefined) this.currentAcreage = acreage;
+
+    const dim = this.getEstateDimension(this.currentAcreage);
 
     // Dispose old geometries
     this.islandMesh.geometry.dispose();
@@ -189,29 +206,30 @@ export class FarmRenderer {
     }
 
     if (shape === 'square') {
-      // 1. Topsoil 1-Ha Cadastral Square Block (13.5m x 13.5m)
-      const topGeo = new THREE.BoxGeometry(13.5, 0.6, 13.5);
+      // 1. Topsoil Block
+      const topGeo = new THREE.BoxGeometry(dim, 0.6, dim);
       topGeo.computeVertexNormals();
       this.islandMesh.geometry = topGeo;
       this.islandMesh.position.set(0, -0.3, 0);
 
       // 2. Stratified Subterranean Bedrock Base
-      const rimGeo = new THREE.BoxGeometry(13.2, 1.2, 13.2);
+      const rimGeo = new THREE.BoxGeometry(dim - 0.3, 1.2, dim - 0.3);
       rimGeo.computeVertexNormals();
       this.islandRim.geometry = rimGeo;
       this.islandRim.position.set(0, -1.1, 0);
 
-      // 3. Perimeter Alley Markers / Boundary Drainage Ridge
+      // 3. Perimeter Alley Markers / Boundary Ridge
       const hedgeMat = getCleanPBR({ color: 0x14532d, roughness: 0.6, clearcoat: 0.2 });
-      const edgeLen = 13.6;
-      const hedgeThickness = 0.15;
+      const edgeLen = dim + 0.1;
+      const hedgeThickness = 0.16;
       const hedgeH = 0.12;
+      const halfD = dim / 2;
 
       const hedges = [
-        { w: edgeLen, d: hedgeThickness, x: 0, z: 6.75 },
-        { w: edgeLen, d: hedgeThickness, x: 0, z: -6.75 },
-        { w: hedgeThickness, d: edgeLen, x: 6.75, z: 0 },
-        { w: hedgeThickness, d: edgeLen, x: -6.75, z: 0 },
+        { w: edgeLen, d: hedgeThickness, x: 0, z: halfD },
+        { w: edgeLen, d: hedgeThickness, x: 0, z: -halfD },
+        { w: hedgeThickness, d: edgeLen, x: halfD, z: 0 },
+        { w: hedgeThickness, d: edgeLen, x: -halfD, z: 0 },
       ];
 
       hedges.forEach(h => {
@@ -222,16 +240,34 @@ export class FarmRenderer {
       });
     } else {
       // Circular Ecological Diorama
-      const topGeo = new THREE.CylinderGeometry(8.2, 8.4, 0.6, 64);
+      const rTop = (dim / 2) * 1.15;
+      const topGeo = new THREE.CylinderGeometry(rTop, rTop * 1.02, 0.6, 64);
       topGeo.computeVertexNormals();
       this.islandMesh.geometry = topGeo;
       this.islandMesh.position.set(0, -0.3, 0);
 
-      const rimGeo = new THREE.CylinderGeometry(8.4, 7.6, 1.2, 64);
+      const rimGeo = new THREE.CylinderGeometry(rTop * 1.02, rTop * 0.92, 1.2, 64);
       rimGeo.computeVertexNormals();
       this.islandRim.geometry = rimGeo;
       this.islandRim.position.set(0, -1.1, 0);
     }
+
+    // Expand Soft Contact Shadow Plane to fit acreage
+    this.shadowPlane.geometry.dispose();
+    this.shadowPlane.geometry = new THREE.PlaneGeometry(dim * 1.6, dim * 1.6);
+
+    // Update Shadow Camera to cover full estate without clipping
+    const halfSpan = dim * 0.75;
+    this.sunLight.shadow.camera.left = -halfSpan;
+    this.sunLight.shadow.camera.right = halfSpan;
+    this.sunLight.shadow.camera.top = halfSpan;
+    this.sunLight.shadow.camera.bottom = -halfSpan;
+    this.sunLight.shadow.camera.updateProjectionMatrix();
+  }
+
+  setFarmAcreage(acres: number) {
+    this.currentAcreage = acres;
+    this.setFarmShape(this.currentShape, acres);
   }
 
   setFarmEnvironment(farm: FarmEcosystem, theme: 'light' | 'dark') {

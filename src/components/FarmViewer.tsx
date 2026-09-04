@@ -2,25 +2,39 @@ import { useEffect, useRef, useState } from 'react';
 import { useAtlas, useSelectedFarm } from '@/state/useAtlas';
 import { FarmScene } from '@/three/FarmScene';
 import type { WalkState } from '@/three/FirstPersonController';
+import type { FarmInfrastructure } from '@/data/types';
 import { HotspotCallouts } from './HotspotCallouts';
 import { ViewStateSelector } from './ViewStateSelector';
 import '@/styles/viewer.css';
 
 const LAYERS = [
-  { id: 'canopy',     label: 'Canopy',     color: '#22c55e' },
-  { id: 'shrub',      label: 'Shrub',      color: '#16a34a' },
-  { id: 'herbaceous', label: 'Crops',      color: '#84cc16' },
-  { id: 'roots',      label: 'Roots',      color: '#d97706' },
-  { id: 'fauna',      label: 'Fauna',      color: '#f59e0b' },
-  { id: 'particles',  label: 'Cycles',     color: '#a855f7' },
+  { id: 'canopy',         label: 'Canopy',     color: '#22c55e' },
+  { id: 'shrub',          label: 'Shrub',      color: '#16a34a' },
+  { id: 'herbaceous',     label: 'Crops',      color: '#84cc16' },
+  { id: 'roots',          label: 'Roots',      color: '#d97706' },
+  { id: 'fauna',          label: 'Fauna',      color: '#f59e0b' },
+  { id: 'infrastructure', label: 'Infra',      color: '#38bdf8' },
+  { id: 'particles',      label: 'Cycles',     color: '#a855f7' },
 ] as const;
 
 const CAMERA_PRESETS = [
-  { id: 'overview',     label: 'Overview',   icon: '🎯' },
-  { id: 'ground-layer', label: 'Ground',     icon: '🌿' },
-  { id: 'top-down',     label: 'Top-Down',   icon: '📐' },
-  { id: 'cocoa-closeup',label: 'Close-Up',   icon: '🔍' },
+  { id: 'overview',     label: 'Plot View',    icon: '🎯' },
+  { id: 'estate',       label: 'Estate View',  icon: '🏡' },
+  { id: 'landscape',    label: 'Landscape',    icon: '🛰️' },
+  { id: 'ground-layer', label: 'Ground',       icon: '🌿' },
+  { id: 'top-down',     label: 'Top-Down',     icon: '📐' },
+  { id: 'cocoa-closeup',label: 'Close-Up',     icon: '🔍' },
 ] as const;
+
+const ACREAGE_PRESETS = [
+  { label: '1 Ha (2.5 ac)', value: 2.47 },
+  { label: '30 Acres',      value: 30 },
+  { label: '100 Acres',     value: 100 },
+  { label: '500 Acres',     value: 500 },
+  { label: '1,000 Acres',   value: 1000 },
+  { label: '10,000 Acres',  value: 10000 },
+  { label: '1 Million ac',  value: 1000000 },
+];
 
 export function FarmViewer() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -29,7 +43,9 @@ export function FarmViewer() {
   const {
     viewState, season, timeOfDay, theme, layerFilters,
     activeDisplayMode, sandboxCropIds, sandboxLivestockIds, farmShape,
-    setDisplayMode, setActiveHotspot, toggleLayer, setFarmShape
+    farmAcreage, infrastructure, leftPanelOpen, rightPanelOpen,
+    setDisplayMode, setActiveHotspot, toggleLayer, setFarmShape,
+    setFarmAcreage, toggleInfrastructure
   } = useAtlas();
 
   const [loading, setLoading] = useState(true);
@@ -42,6 +58,11 @@ export function FarmViewer() {
   });
   const [hotspotPositions, setHotspotPositions] = useState<Map<string, { x: number; y: number; visible: boolean }>>(new Map());
 
+  // Modals / popovers
+  const [scaleMenuOpen, setScaleMenuOpen] = useState(false);
+  const [infraMenuOpen, setInfraMenuOpen] = useState(false);
+  const [customAcreInput, setCustomAcreInput] = useState(String(farmAcreage));
+
   // Initialise Three.js scene once
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -53,6 +74,8 @@ export function FarmViewer() {
     });
     sceneRef.current = scene;
     scene.setFarmShape(farmShape);
+    scene.setFarmAcreage(farmAcreage);
+    scene.setInfrastructure(infrastructure);
     setLoading(false);
 
     return () => {
@@ -67,19 +90,30 @@ export function FarmViewer() {
     setLoading(true);
 
     if (activeDisplayMode === 'sandbox') {
-      sceneRef.current.loadCustomConfiguration(sandboxCropIds, sandboxLivestockIds, theme);
+      sceneRef.current.loadCustomConfiguration(sandboxCropIds, sandboxLivestockIds, theme, farmAcreage, infrastructure);
     } else if (farm) {
-      sceneRef.current.loadFarm(farm, theme);
+      sceneRef.current.loadFarm(farm, theme, farmAcreage, infrastructure);
     }
 
     const timer = setTimeout(() => setLoading(false), 200);
     return () => clearTimeout(timer);
   }, [activeDisplayMode, farm?.id, sandboxCropIds.length, sandboxLivestockIds.length, theme]);
 
-  // Sync farm shape (Square 1-Ha Plot vs Circular Diorama)
+  // Sync farm shape (Square Plot vs Circular Diorama)
   useEffect(() => {
     sceneRef.current?.setFarmShape(farmShape);
   }, [farmShape]);
+
+  // Sync farm acreage
+  useEffect(() => {
+    sceneRef.current?.setFarmAcreage(farmAcreage);
+    setCustomAcreInput(String(farmAcreage));
+  }, [farmAcreage]);
+
+  // Sync infrastructure elements
+  useEffect(() => {
+    sceneRef.current?.setInfrastructure(infrastructure);
+  }, [infrastructure]);
 
   // Sync view state
   useEffect(() => {
@@ -115,133 +149,121 @@ export function FarmViewer() {
     setIsWalkMode(nowWalk);
   };
 
+  const handleCustomAcreSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const val = parseFloat(customAcreInput);
+    if (!isNaN(val) && val > 0) {
+      setFarmAcreage(val);
+      setScaleMenuOpen(false);
+    }
+  };
+
+  // Trigger Three.js resize whenever panels expand/collapse
+  useEffect(() => {
+    const handleResize = () => {
+      sceneRef.current?.resize();
+    };
+    handleResize();
+    const t1 = setTimeout(handleResize, 80);
+    const t2 = setTimeout(handleResize, 280);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, [leftPanelOpen, rightPanelOpen]);
+
   return (
     <div className="farm-viewer-wrap">
       {/* Three.js Canvas */}
       <canvas
         ref={canvasRef}
-        className="farm-viewer-canvas"
-        id="farm-viewer-canvas"
-        style={{ width: '100%', height: '100%', cursor: isWalkMode ? 'crosshair' : 'grab' }}
+        className="farm-viewer-canvas farm-canvas"
+        aria-label="3D Interactive Farm Scene"
       />
 
       {/* Loading overlay */}
       {loading && (
-        <div className="viewer-loading" role="status" aria-label="Loading farm">
-          <span className="viewer-loading-icon">🌿</span>
-          <p>
-            {activeDisplayMode === 'sandbox'
-              ? 'Rendering configured polyculture in 3D…'
-              : 'Generating 3D agro-ecosystem…'}
-          </p>
+        <div className="viewer-loading" aria-live="polite">
+          <div className="viewer-spinner" />
+          <span>Rendering Farm Ecosystem...</span>
         </div>
       )}
 
-      {/* ─── First-Person Walk Mode Overlay & Crosshair ─── */}
+      {/* First-Person HUD when walking */}
       {isWalkMode && (
-        <>
-          {/* Center Crosshair Reticle */}
-          <div style={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            pointerEvents: 'none',
-            zIndex: 15,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}>
-            <div style={{
-              width: '6px',
-              height: '6px',
-              borderRadius: '50%',
-              background: 'rgba(255, 255, 255, 0.9)',
-              boxShadow: '0 0 8px rgba(0, 0, 0, 0.6)',
-            }} />
-          </div>
-
-          {/* First-Person HUD (Bottom Center) */}
-          <div style={{
-            position: 'absolute',
-            bottom: 'var(--space-6)',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            zIndex: 20,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '8px',
-            pointerEvents: 'auto',
-          }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              background: 'rgba(6, 12, 8, 0.85)',
-              backdropFilter: 'blur(16px)',
-              WebkitBackdropFilter: 'blur(16px)',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
-              borderRadius: 'var(--r-lg)',
-              padding: '10px 18px',
-              color: '#f8fafc',
-              boxShadow: '0 12px 32px rgba(0, 0, 0, 0.5)',
-              fontSize: '12px',
-            }}>
-              <span style={{ fontSize: '16px' }}>🚶</span>
-              <div>
-                <strong>Farmer Eye-Level Walk (1.65m)</strong>
-                <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '2px' }}>
-                  Use <kbd style={{ padding: '2px 4px', background: '#334155', borderRadius: '3px' }}>W</kbd>{' '}
-                  <kbd style={{ padding: '2px 4px', background: '#334155', borderRadius: '3px' }}>A</kbd>{' '}
-                  <kbd style={{ padding: '2px 4px', background: '#334155', borderRadius: '3px' }}>S</kbd>{' '}
-                  <kbd style={{ padding: '2px 4px', background: '#334155', borderRadius: '3px' }}>D</kbd> or Arrows + Drag Mouse to Look
-                </div>
+        <div className="fpv-hud-overlay" style={{
+          position: 'absolute',
+          bottom: '24px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '8px',
+          background: 'rgba(15, 23, 42, 0.85)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          border: '1px solid rgba(255, 255, 255, 0.15)',
+          borderRadius: '16px',
+          padding: '12px 24px',
+          color: '#ffffff',
+          boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.4)',
+          zIndex: 40,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontSize: '18px' }}>👨‍🌾</span>
+            <div>
+              <div style={{ fontSize: '13px', fontWeight: 700, letterSpacing: '0.02em' }}>
+                Farmer Walk Mode — 1.65m Eye Level
               </div>
-
-              <div style={{
-                borderLeft: '1px solid #334155',
-                paddingLeft: '12px',
-                fontSize: '11px',
-                color: '#38bdf8',
-                fontFamily: 'var(--font-mono)',
-              }}>
-                X: {walkState.coordinates.x > 0 ? `+${walkState.coordinates.x}` : walkState.coordinates.x}m
-                <br />
-                Z: {walkState.coordinates.z > 0 ? `+${walkState.coordinates.z}` : walkState.coordinates.z}m
+              <div style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.65)' }}>
+                Use <kbd style={{ background: '#334155', padding: '1px 5px', borderRadius: '4px' }}>W</kbd> <kbd style={{ background: '#334155', padding: '1px 5px', borderRadius: '4px' }}>A</kbd> <kbd style={{ background: '#334155', padding: '1px 5px', borderRadius: '4px' }}>S</kbd> <kbd style={{ background: '#334155', padding: '1px 5px', borderRadius: '4px' }}>D</kbd> to walk, <kbd style={{ background: '#334155', padding: '1px 5px', borderRadius: '4px' }}>Shift</kbd> to sprint, mouse to look around
               </div>
-
-              <button
-                onClick={handleToggleWalkMode}
-                style={{
-                  padding: '6px 12px',
-                  borderRadius: 'var(--r-md)',
-                  background: '#ef4444',
-                  border: 'none',
-                  color: '#ffffff',
-                  fontWeight: 600,
-                  fontSize: '11px',
-                  cursor: 'pointer',
-                }}
-              >
-                Exit Walk ✕
-              </button>
             </div>
+            <button
+              onClick={handleToggleWalkMode}
+              style={{
+                marginLeft: '12px',
+                padding: '6px 14px',
+                borderRadius: '8px',
+                background: '#ef4444',
+                color: '#ffffff',
+                border: 'none',
+                fontWeight: 600,
+                fontSize: '11px',
+                cursor: 'pointer',
+              }}
+            >
+              Exit Walk [F]
+            </button>
           </div>
-        </>
+          {walkState.activeTarget && (
+            <div style={{
+              fontSize: '11px',
+              color: '#38bdf8',
+              background: 'rgba(56, 189, 248, 0.12)',
+              padding: '2px 10px',
+              borderRadius: '6px',
+            }}>
+              Approaching: <strong>{walkState.activeTarget}</strong>
+            </div>
+          )}
+        </div>
       )}
 
-      {/* Active Mode Badge & Controls (Top Left) */}
-      <div style={{
+      {/* Floating Toolbar (top left) */}
+      <div className="viewer-overlay-top-left" style={{
         position: 'absolute',
-        top: 'var(--space-4)',
-        left: 'var(--space-4)',
-        zIndex: 10,
+        top: '16px',
+        left: '16px',
         display: 'flex',
         alignItems: 'center',
         gap: '8px',
+        zIndex: 20,
+        flexWrap: 'wrap',
       }}>
-        <div className="viewer-mode-badge" style={{
+        {/* Active Farm / Sandbox Badge */}
+        <div style={{
           display: 'flex',
           alignItems: 'center',
           gap: '6px',
@@ -283,6 +305,245 @@ export function FarmViewer() {
           )}
         </div>
 
+        {/* Acreage Scale Selector Pill */}
+        <div style={{ position: 'relative' }}>
+          <button
+            onClick={() => {
+              setScaleMenuOpen(!scaleMenuOpen);
+              setInfraMenuOpen(false);
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              background: 'var(--glass)',
+              backdropFilter: 'blur(16px)',
+              WebkitBackdropFilter: 'blur(16px)',
+              border: scaleMenuOpen ? '1px solid var(--brand-primary)' : '1px solid var(--border-strong)',
+              borderRadius: 'var(--r-full)',
+              padding: '5px 12px',
+              fontSize: '11px',
+              fontWeight: 600,
+              color: 'var(--ink-strong)',
+              cursor: 'pointer',
+              boxShadow: 'var(--shadow-card)',
+            }}
+            title="Configure Farm Acreage & Landscape Size"
+          >
+            <span>📐</span>
+            <span>
+              {farmAcreage >= 1000
+                ? `${(farmAcreage / 1000).toLocaleString()}k ac`
+                : `${farmAcreage} ac`}
+              {' '}
+              <span style={{ opacity: 0.65 }}>({(farmAcreage / 2.471).toFixed(1)} ha)</span>
+            </span>
+            <span style={{ fontSize: '9px', opacity: 0.7 }}>▼</span>
+          </button>
+
+          {/* Scale Menu Popover */}
+          {scaleMenuOpen && (
+            <div style={{
+              position: 'absolute',
+              top: '110%',
+              left: '0',
+              width: '280px',
+              background: 'var(--surface-overlay)',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
+              border: '1px solid var(--border-strong)',
+              borderRadius: '14px',
+              padding: '12px',
+              boxShadow: 'var(--shadow-panel)',
+              zIndex: 50,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '10px',
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--ink-strong)' }}>
+                  Farm Acreage & Landscape Scale
+                </span>
+                <button
+                  onClick={() => setScaleMenuOpen(false)}
+                  style={{ background: 'transparent', border: 'none', color: 'var(--muted)', cursor: 'pointer' }}
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '6px' }}>
+                {ACREAGE_PRESETS.map((preset) => (
+                  <button
+                    key={preset.value}
+                    onClick={() => {
+                      setFarmAcreage(preset.value);
+                      setScaleMenuOpen(false);
+                    }}
+                    style={{
+                      padding: '6px 8px',
+                      borderRadius: '8px',
+                      fontSize: '11px',
+                      fontWeight: farmAcreage === preset.value ? 700 : 500,
+                      background: farmAcreage === preset.value ? 'var(--brand-primary)' : 'var(--surface-raised)',
+                      color: farmAcreage === preset.value ? '#ffffff' : 'var(--ink-body)',
+                      border: '1px solid var(--border)',
+                      cursor: 'pointer',
+                      textAlign: 'center',
+                    }}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Custom numeric input form */}
+              <form onSubmit={handleCustomAcreSubmit} style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
+                <input
+                  type="number"
+                  min="0.5"
+                  step="0.5"
+                  value={customAcreInput}
+                  onChange={(e) => setCustomAcreInput(e.target.value)}
+                  placeholder="Custom Acres"
+                  style={{
+                    flex: 1,
+                    padding: '5px 8px',
+                    borderRadius: '6px',
+                    border: '1px solid var(--border)',
+                    background: 'var(--surface)',
+                    color: 'var(--ink-strong)',
+                    fontSize: '11px',
+                  }}
+                />
+                <button
+                  type="submit"
+                  style={{
+                    padding: '5px 10px',
+                    borderRadius: '6px',
+                    background: 'var(--brand-primary)',
+                    color: '#ffffff',
+                    border: 'none',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Set
+                </button>
+              </form>
+            </div>
+          )}
+        </div>
+
+        {/* Infrastructure & Security Config Button */}
+        <div style={{ position: 'relative' }}>
+          <button
+            onClick={() => {
+              setInfraMenuOpen(!infraMenuOpen);
+              setScaleMenuOpen(false);
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              background: 'var(--glass)',
+              backdropFilter: 'blur(16px)',
+              WebkitBackdropFilter: 'blur(16px)',
+              border: infraMenuOpen ? '1px solid var(--brand-primary)' : '1px solid var(--border-strong)',
+              borderRadius: 'var(--r-full)',
+              padding: '5px 12px',
+              fontSize: '11px',
+              fontWeight: 600,
+              color: 'var(--ink-strong)',
+              cursor: 'pointer',
+              boxShadow: 'var(--shadow-card)',
+            }}
+            title="Configure Farm Infrastructure & Security"
+          >
+            <span>🏗️</span>
+            <span>Infrastructure</span>
+            <span style={{ fontSize: '9px', opacity: 0.7 }}>⚙️</span>
+          </button>
+
+          {/* Infrastructure Menu Popover */}
+          {infraMenuOpen && (
+            <div style={{
+              position: 'absolute',
+              top: '110%',
+              left: '0',
+              width: '260px',
+              background: 'var(--surface-overlay)',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
+              border: '1px solid var(--border-strong)',
+              borderRadius: '14px',
+              padding: '12px',
+              boxShadow: 'var(--shadow-panel)',
+              zIndex: 50,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '8px',
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--ink-strong)' }}>
+                  Farm Facilities & Security
+                </span>
+                <button
+                  onClick={() => setInfraMenuOpen(false)}
+                  style={{ background: 'transparent', border: 'none', color: 'var(--muted)', cursor: 'pointer' }}
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {[
+                  { key: 'roads', label: 'Laterite Access Roads', icon: '🛣️' },
+                  { key: 'farmhouse', label: 'Farmstead & Operations Hub', icon: '🏡' },
+                  { key: 'cctv', label: 'Solar CCTV Security Towers', icon: '📹' },
+                  { key: 'waterTower', label: 'Water Tower & Irrigation', icon: '💧' },
+                  { key: 'solarArray', label: 'Solar Power Array', icon: '☀️' },
+                  { key: 'dryingPatio', label: 'Solar Drying Patio', icon: '🧺' },
+                  { key: 'perimeterFence', label: 'Perimeter Security Fence', icon: '🛡️' },
+                ].map((item) => {
+                  const k = item.key as keyof FarmInfrastructure;
+                  const active = infrastructure[k];
+                  return (
+                    <button
+                      key={item.key}
+                      onClick={() => toggleInfrastructure(k)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '6px 10px',
+                        borderRadius: '8px',
+                        fontSize: '11px',
+                        fontWeight: 500,
+                        background: active ? 'rgba(34, 197, 94, 0.12)' : 'var(--surface-raised)',
+                        color: active ? 'var(--status-good)' : 'var(--muted)',
+                        border: active ? '1px solid rgba(34, 197, 94, 0.35)' : '1px solid var(--border)',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span>{item.icon}</span>
+                        <span>{item.label}</span>
+                      </span>
+                      <span style={{ fontWeight: 700, fontSize: '10px' }}>
+                        {active ? 'ON' : 'OFF'}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Plot Cadastral Shape Toggle (Square / Circle) */}
         <button
           onClick={() => setFarmShape(farmShape === 'square' ? 'circle' : 'square')}
@@ -302,9 +563,9 @@ export function FarmViewer() {
             cursor: 'pointer',
             boxShadow: 'var(--shadow-card)',
           }}
-          title={farmShape === 'square' ? 'Switch to Circular Diorama' : 'Switch to 1-Hectare Square Plot'}
+          title={farmShape === 'square' ? 'Switch to Circular Diorama' : 'Switch to Square Cadastral Plot'}
         >
-          <span>{farmShape === 'square' ? '⏹ 1-Ha Square Plot' : '⏺ Circular Diorama'}</span>
+          <span>{farmShape === 'square' ? '⏹ Square Plot' : '⏺ Circular Diorama'}</span>
         </button>
 
         {/* Walkable First-Person View Toggle Button */}
@@ -344,9 +605,9 @@ export function FarmViewer() {
             <button
               key={layer.id}
               id={`layer-${layer.id}`}
-              className={`layer-chip ${layerFilters[layer.id] ? 'on' : ''}`}
-              onClick={() => toggleLayer(layer.id)}
-              aria-pressed={layerFilters[layer.id]}
+              className={`layer-chip ${layerFilters[layer.id as keyof typeof layerFilters] ? 'on' : ''}`}
+              onClick={() => toggleLayer(layer.id as keyof typeof layerFilters)}
+              aria-pressed={layerFilters[layer.id as keyof typeof layerFilters]}
             >
               <span
                 className="layer-chip-dot"

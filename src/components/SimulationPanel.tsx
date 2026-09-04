@@ -3,7 +3,7 @@ import { lerLabel, simulateIntercropping } from '@/data/intercroppingRules';
 import type { FarmerAdvisory } from '@/data/types';
 
 export function SimulationPanel() {
-  const { simulationResult, activeDisplayMode, sandboxCropIds, sandboxLivestockIds } = useAtlas();
+  const { simulationResult, activeDisplayMode, sandboxCropIds, sandboxLivestockIds, farmAcreage } = useAtlas();
   const farm = useSelectedFarm();
 
   // If in preset farm mode and sandbox is empty, evaluate active farm's advisories
@@ -21,6 +21,26 @@ export function SimulationPanel() {
   const lerFill = Math.min(currentLER / 2.5, 1) * lerCircumference;
   const lerOffset = lerCircumference - lerFill;
   const lerColor = status === 'good' ? 'var(--status-good)' : status === 'warn' ? 'var(--status-warn)' : 'var(--status-bad)';
+
+  // Scale economics and yields to the configured acreage
+  const hectares = (farmAcreage || 2.47) / 2.471;
+  const baselineYieldTonnePerHa = 3.2 * (currentLER || 1.0);
+  const totalYieldTonnes = hectares * baselineYieldTonnePerHa;
+  const revenuePerHa = 2200000 * (currentLER || 1.0);
+  const totalRevenueNaira = hectares * revenuePerHa;
+  const carbonOffsetTonnes = hectares * 4.8;
+  const jobsSupported = Math.max(1, Math.round(hectares * 1.5));
+
+  const formatRevenue = (amount: number): string => {
+    if (amount >= 1e9) return `₦${(amount / 1e9).toFixed(2)}B`;
+    if (amount >= 1e6) return `₦${(amount / 1e6).toFixed(1)}M`;
+    return `₦${(amount / 1e3).toFixed(0)}k`;
+  };
+
+  const formatTonnes = (t: number): string => {
+    if (t >= 1000) return `${(t / 1000).toFixed(1)}k tonnes`;
+    return `${t.toFixed(1)} tonnes`;
+  };
 
   return (
     <aside className="simulation-panel" aria-label="Intercropping simulation & Farmer Advisories">
@@ -122,6 +142,62 @@ export function SimulationPanel() {
             fillClass="water"
             fillPct={waterEfficiency}
           />
+        </div>
+      </div>
+
+      {/* ─── Scaled Farm Production & Commercial Economics ─── */}
+      <div className="synergy-hud" style={{ gap: 'var(--space-2)' }}>
+        <div className="hud-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span>📊</span>
+            <span>Total Farm Production</span>
+          </div>
+          <span style={{
+            fontSize: '11px',
+            fontWeight: 700,
+            color: 'var(--brand-primary)',
+            background: 'var(--surface-raised)',
+            padding: '2px 8px',
+            borderRadius: 'var(--r-full)',
+            border: '1px solid var(--border)'
+          }}>
+            {farmAcreage >= 1000 ? `${(farmAcreage / 1000).toLocaleString()}k` : farmAcreage} ac ({hectares.toFixed(1)} ha)
+          </span>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', marginTop: '4px' }}>
+          <div style={{ background: 'var(--surface-raised)', padding: '8px 10px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+            <div style={{ fontSize: '10px', color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span>🌾</span> Est. Annual Harvest
+            </div>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--ink-strong)', marginTop: '2px' }}>
+              {formatTonnes(totalYieldTonnes)}
+            </div>
+          </div>
+          <div style={{ background: 'var(--surface-raised)', padding: '8px 10px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+            <div style={{ fontSize: '10px', color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span>💰</span> Gross Revenue
+            </div>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--status-good)', marginTop: '2px' }}>
+              {formatRevenue(totalRevenueNaira)}
+            </div>
+          </div>
+          <div style={{ background: 'var(--surface-raised)', padding: '8px 10px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+            <div style={{ fontSize: '10px', color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span>🌱</span> Carbon Storage
+            </div>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--ink-strong)', marginTop: '2px' }}>
+              {formatTonnes(carbonOffsetTonnes)} CO₂e
+            </div>
+          </div>
+          <div style={{ background: 'var(--surface-raised)', padding: '8px 10px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+            <div style={{ fontSize: '10px', color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span>👥</span> Agrarian Livelihoods
+            </div>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--ink-strong)', marginTop: '2px' }}>
+              {jobsSupported.toLocaleString()} Workers
+            </div>
+          </div>
         </div>
       </div>
 

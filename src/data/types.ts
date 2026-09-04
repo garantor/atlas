@@ -171,6 +171,16 @@ export interface IntercroppingResult {
   farmerAdvisories: FarmerAdvisory[];
 }
 
+export interface FarmInfrastructure {
+  roads: boolean;
+  farmhouse: boolean;
+  cctv: boolean;
+  waterTower: boolean;
+  solarArray: boolean;
+  perimeterFence: boolean;
+  dryingPatio: boolean;
+}
+
 export interface AtlasState {
   selectedFarmId: string | null;
   viewState: ViewState;
@@ -180,6 +190,8 @@ export interface AtlasState {
   theme: 'light' | 'dark';
   activeDisplayMode: 'farm' | 'sandbox';
   farmShape: 'square' | 'circle';
+  farmAcreage: number;                // in acres (e.g. 2.47 for 1 Ha, 30, 100, 1000, 1000000)
+  infrastructure: FarmInfrastructure;
   sandboxCropIds: string[];
   sandboxLivestockIds: string[];
   simulationResult: IntercroppingResult;
@@ -199,3 +211,4 @@ export interface AtlasState {
     particles: boolean;
   };
 }
+

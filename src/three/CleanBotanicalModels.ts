@@ -28,6 +28,7 @@ export function getCleanPBR(options: {
   transmission?: number;
   ior?: number;
   transparent?: boolean;
+  opacity?: number;
   alphaTest?: number;
   emissive?: number;
   emissiveIntensity?: number;
@@ -52,6 +53,7 @@ export function getCleanPBR(options: {
   if (options.transmission !== undefined) matOptions.transmission = options.transmission;
   if (options.ior !== undefined) matOptions.ior = options.ior;
   if (options.transparent !== undefined) matOptions.transparent = options.transparent;
+  if (options.opacity !== undefined) matOptions.opacity = options.opacity;
   if (options.alphaTest !== undefined) matOptions.alphaTest = options.alphaTest;
   if (options.emissive !== undefined) matOptions.emissive = options.emissive;
   if (options.emissiveIntensity !== undefined) matOptions.emissiveIntensity = options.emissiveIntensity;

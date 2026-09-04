@@ -39,6 +39,9 @@ interface AtlasActions {
   setCardDetail: (id: string | null) => void;
   setBiomeFilter: (biome: BiomeZone | 'all') => void;
   setFarmShape: (shape: 'square' | 'circle') => void;
+  setFarmAcreage: (acres: number) => void;
+  toggleInfrastructure: (key: keyof import('../data/types').FarmInfrastructure) => void;
+  setInfrastructure: (infra: Partial<import('../data/types').FarmInfrastructure>) => void;
   setLeftPanelOpen: (open: boolean) => void;
   setRightPanelOpen: (open: boolean) => void;
   toggleLeftPanel: () => void;
@@ -58,6 +61,16 @@ export const useAtlas = create<AtlasState & AtlasActions>((set, get) => ({
   selectedFarmId: 'cocoa-agroforest',
   activeDisplayMode: 'farm',
   farmShape: 'square',
+  farmAcreage: 2.47, // 1 Hectare default
+  infrastructure: {
+    roads: true,
+    farmhouse: true,
+    cctv: true,
+    waterTower: true,
+    solarArray: true,
+    perimeterFence: true,
+    dryingPatio: true,
+  },
   viewState: 'macro',
   activeHotspotId: null,
   season: 'wet',
@@ -157,6 +170,21 @@ export const useAtlas = create<AtlasState & AtlasActions>((set, get) => ({
   setCardDetail: (id) => set({ cardDetailId: id }),
   setBiomeFilter: (biome) => set({ biomeFilter: biome }),
   setFarmShape: (shape) => set({ farmShape: shape }),
+  setFarmAcreage: (acres) => set({ farmAcreage: Math.max(0.1, acres) }),
+  toggleInfrastructure: (key) =>
+    set((state) => ({
+      infrastructure: {
+        ...state.infrastructure,
+        [key]: !state.infrastructure[key],
+      },
+    })),
+  setInfrastructure: (infra) =>
+    set((state) => ({
+      infrastructure: {
+        ...state.infrastructure,
+        ...infra,
+      },
+    })),
   setLeftPanelOpen: (open) => set({ leftPanelOpen: open }),
   setRightPanelOpen: (open) => set({ rightPanelOpen: open }),
   toggleLeftPanel: () => set(state => ({ leftPanelOpen: !state.leftPanelOpen })),

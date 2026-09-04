@@ -14,7 +14,7 @@ import { HotspotManager } from './HotspotManager';
 import { BoidsSimulation } from './BoidsSimulation';
 import { updateWindUniforms } from './WindShader';
 import { FirstPersonController, type WalkState } from './FirstPersonController';
-import type { FarmEcosystem, ViewState, Season } from '../data/types';
+import type { FarmEcosystem, ViewState, Season, FarmInfrastructure } from '../data/types';
 
 interface SceneCallbacks {
   onHotspotClick: (id: string) => void;
@@ -40,6 +40,18 @@ export class FarmScene {
   private lastTime = performance.now();
   private elapsedTime = 0;
   private currentFarmId: string | null = null;
+  private currentFarm: FarmEcosystem | null = null;
+  private currentSandboxConfig: { cropIds: string[]; livestockIds: string[] } | null = null;
+  private currentAcreage = 2.47;
+  private currentInfra: FarmInfrastructure = {
+    roads: true,
+    farmhouse: true,
+    cctv: true,
+    waterTower: true,
+    solarArray: true,
+    perimeterFence: true,
+    dryingPatio: true,
+  };
   private currentViewState: ViewState = 'macro';
   private resizeObserver: ResizeObserver | null = null;
 
@@ -63,14 +75,16 @@ export class FarmScene {
 
     // ─── Scene & Atmosphere ──────────────────────────────────────────────────
     this.scene = new THREE.Scene();
-    this.scene.fog = new THREE.FogExp2(0x060c08, 0.015);
+    this.scene.fog = new THREE.FogExp2(0x060c08, 0.012);
 
     // ─── Camera ──────────────────────────────────────────────────────────────
+    const initW = canvas.clientWidth || canvas.parentElement?.clientWidth || window.innerWidth;
+    const initH = canvas.clientHeight || canvas.parentElement?.clientHeight || window.innerHeight;
     this.camera = new THREE.PerspectiveCamera(
       42,
-      canvas.clientWidth / canvas.clientHeight,
+      initW / (initH || 1),
       0.1,
-      200
+      2000
     );
     this.camera.position.set(9, 7, 11);
 
@@ -80,7 +94,7 @@ export class FarmScene {
     this.controls.dampingFactor = 0.06;
     this.controls.maxPolarAngle = Math.PI / 2.15;
     this.controls.minDistance = 3;
-    this.controls.maxDistance = 35;
+    this.controls.maxDistance = 350;
     this.controls.target.set(0, 0.5, 0);
 
     // ─── Sub-systems ─────────────────────────────────────────────────────────
@@ -107,6 +121,9 @@ export class FarmScene {
     if (typeof ResizeObserver !== 'undefined') {
       this.resizeObserver = new ResizeObserver(() => this.resize());
       this.resizeObserver.observe(canvas);
+      if (canvas.parentElement) {
+        this.resizeObserver.observe(canvas.parentElement);
+      }
     }
 
     this.startLoop();
@@ -129,7 +146,7 @@ export class FarmScene {
     this.isFirstPerson = false;
     this.firstPersonController.disable();
     this.controls.enabled = true;
-    this.flyToPreset('overview');
+    this.flyToPreset(this.currentAcreage >= 30 ? 'estate' : 'overview');
   }
 
   toggleWalkMode() {
@@ -142,31 +159,101 @@ export class FarmScene {
   }
 
   /** Load and render a specific farm ecosystem */
-  loadFarm(farm: FarmEcosystem, theme: 'light' | 'dark') {
+  loadFarm(
+    farm: FarmEcosystem,
+    theme: 'light' | 'dark',
+    acreage = this.currentAcreage,
+    infrastructure = this.currentInfra
+  ) {
     this.currentFarmId = farm.id;
+    this.currentFarm = farm;
+    this.currentAcreage = acreage;
+    this.currentInfra = infrastructure;
 
     this.farmBuilder.clear();
     this.hotspotManager.clear();
     this.particleCycles.clear();
 
-    this.farmBuilder.build(farm);
+    this.farmRenderer.setFarmAcreage(acreage);
+    const dim = this.farmRenderer.getEstateDimension(acreage);
+    this.controls.maxDistance = Math.max(350, dim * 6);
+
+    this.farmBuilder.build(farm, acreage, infrastructure);
     this.hotspotManager.loadHotspots(farm.hotspots);
     this.particleCycles.buildFlows(farm);
     this.farmRenderer.setFarmEnvironment(farm, theme);
 
-    this.flyToPreset('overview');
+    if (acreage >= 100) {
+      this.flyToPreset('landscape');
+    } else if (acreage >= 10) {
+      this.flyToPreset('estate');
+    } else {
+      this.flyToPreset('overview');
+    }
   }
 
   /** Dynamically render custom sandbox configuration in 3D display */
-  loadCustomConfiguration(cropIds: string[], livestockIds: string[], _theme: 'light' | 'dark') {
+  loadCustomConfiguration(
+    cropIds: string[],
+    livestockIds: string[],
+    _theme: 'light' | 'dark',
+    acreage = this.currentAcreage,
+    infrastructure = this.currentInfra
+  ) {
     this.currentFarmId = 'custom-sandbox';
+    this.currentFarm = null;
+    this.currentSandboxConfig = { cropIds, livestockIds };
+    this.currentAcreage = acreage;
+    this.currentInfra = infrastructure;
 
     this.farmBuilder.clear();
     this.hotspotManager.clear();
     this.particleCycles.clear();
 
-    this.farmBuilder.buildCustom(cropIds, livestockIds);
-    this.flyToPreset('overview');
+    this.farmRenderer.setFarmAcreage(acreage);
+    const dim = this.farmRenderer.getEstateDimension(acreage);
+    this.controls.maxDistance = Math.max(350, dim * 6);
+
+    this.farmBuilder.buildCustom(cropIds, livestockIds, acreage, infrastructure);
+
+    if (acreage >= 100) {
+      this.flyToPreset('landscape');
+    } else if (acreage >= 10) {
+      this.flyToPreset('estate');
+    } else {
+      this.flyToPreset('overview');
+    }
+  }
+
+  setFarmAcreage(acres: number) {
+    this.currentAcreage = acres;
+    this.farmRenderer.setFarmAcreage(acres);
+    const dim = this.farmRenderer.getEstateDimension(acres);
+    this.controls.maxDistance = Math.max(350, dim * 6);
+
+    if (this.currentFarm) {
+      this.farmBuilder.build(this.currentFarm, acres, this.currentInfra);
+    } else if (this.currentSandboxConfig) {
+      this.farmBuilder.buildCustom(
+        this.currentSandboxConfig.cropIds,
+        this.currentSandboxConfig.livestockIds,
+        acres,
+        this.currentInfra
+      );
+    }
+
+    if (acres >= 100) {
+      this.flyToPreset('landscape');
+    } else if (acres >= 10) {
+      this.flyToPreset('estate');
+    } else {
+      this.flyToPreset('overview');
+    }
+  }
+
+  setInfrastructure(infra: FarmInfrastructure) {
+    this.currentInfra = infra;
+    this.farmBuilder.updateInfrastructure(infra);
   }
 
   /** Switch view state with GSAP camera animation */
@@ -179,7 +266,7 @@ export class FarmScene {
 
     switch (viewState) {
       case 'macro':
-        this.flyToPreset('overview');
+        this.flyToPreset(this.currentAcreage >= 30 ? 'estate' : 'overview');
         break;
       case 'subterranean':
         this.flyToPreset('subterranean');
@@ -190,13 +277,19 @@ export class FarmScene {
     }
   }
 
-  /** Fly camera to a named preset */
+  /** Fly camera to a named preset, scaling distance to estate dimensions */
   flyToPreset(preset: string) {
+    const dim = this.farmRenderer.getEstateDimension(this.currentAcreage);
+    const scale = Math.max(1.0, dim / 13.5);
+
     const presets: Record<string, { pos: THREE.Vector3; target: THREE.Vector3 }> = {
-      'overview':     { pos: new THREE.Vector3(9, 7, 11),   target: new THREE.Vector3(0, 0.6, 0) },
-      'subterranean': { pos: new THREE.Vector3(5, -1.8, 9), target: new THREE.Vector3(0, -0.9, 0) },
-      'cycles':       { pos: new THREE.Vector3(7, 5.5, 9),  target: new THREE.Vector3(0, 1.2, 0) },
-      'top-down':     { pos: new THREE.Vector3(0, 15, 0.1), target: new THREE.Vector3(0, 0, 0) },
+      'overview':     { pos: new THREE.Vector3(9 * scale, 7 * scale, 11 * scale),   target: new THREE.Vector3(0, 0.6 * Math.min(scale, 2.0), 0) },
+      'estate':       { pos: new THREE.Vector3(15 * scale, 12 * scale, 17 * scale), target: new THREE.Vector3(0, 0.8 * Math.min(scale, 2.0), 0) },
+      'landscape':    { pos: new THREE.Vector3(22 * scale, 18 * scale, 25 * scale), target: new THREE.Vector3(0, 1.0 * Math.min(scale, 2.0), 0) },
+      'satellite':    { pos: new THREE.Vector3(0.1, 38 * scale, 0.1), target: new THREE.Vector3(0, 0, 0) },
+      'subterranean': { pos: new THREE.Vector3(5 * scale, -1.8 * scale, 9 * scale), target: new THREE.Vector3(0, -0.9 * scale, 0) },
+      'cycles':       { pos: new THREE.Vector3(7 * scale, 5.5 * scale, 9 * scale),  target: new THREE.Vector3(0, 1.2, 0) },
+      'top-down':     { pos: new THREE.Vector3(0, 18 * scale, 0.1), target: new THREE.Vector3(0, 0, 0) },
       'cocoa-closeup':{ pos: new THREE.Vector3(2.5, 2.2, 4.5), target: new THREE.Vector3(0, 1.2, 0) },
       'ground-layer': { pos: new THREE.Vector3(4, 1.2, 5.5),   target: new THREE.Vector3(0, 0.3, 0) },
     };
@@ -205,13 +298,13 @@ export class FarmScene {
 
     gsap.to(this.camera.position, {
       x: p.pos.x, y: p.pos.y, z: p.pos.z,
-      duration: 1.5,
+      duration: 1.6,
       ease: 'power3.inOut',
     });
 
     gsap.to(this.controls.target, {
       x: p.target.x, y: p.target.y, z: p.target.z,
-      duration: 1.5,
+      duration: 1.6,
       ease: 'power3.inOut',
       onUpdate: () => {
         this.controls.update();
@@ -220,7 +313,7 @@ export class FarmScene {
   }
 
   setFarmShape(shape: 'square' | 'circle') {
-    this.farmRenderer.setFarmShape(shape);
+    this.farmRenderer.setFarmShape(shape, this.currentAcreage);
   }
 
   setSeason(season: Season) {
@@ -261,6 +354,11 @@ export class FarmScene {
       this.farmBuilder.updateGrass(this.elapsedTime, this.farmRenderer.getSunPosition());
       updateWindUniforms(this.scene, this.elapsedTime);
 
+      // Keep atmospheric skydome centered on camera so it never clips or runs out
+      if (this.farmRenderer.skyDome) {
+        this.farmRenderer.skyDome.position.copy(this.camera.position);
+      }
+
       // Living wind sway on vegetation & fauna animation
       this.scene.traverse((obj) => {
         if (obj.userData.swayable) {
@@ -283,11 +381,13 @@ export class FarmScene {
     loop();
   }
 
-  private resize() {
-    const w = this.canvas.clientWidth;
-    const h = this.canvas.clientHeight;
+  public resize() {
+    const parent = this.canvas.parentElement;
+    const w = this.canvas.clientWidth || parent?.clientWidth || window.innerWidth;
+    const h = this.canvas.clientHeight || parent?.clientHeight || window.innerHeight;
     if (w === 0 || h === 0) return;
     this.renderer.setSize(w, h, false);
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
   }
