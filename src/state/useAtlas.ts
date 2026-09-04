@@ -39,6 +39,10 @@ interface AtlasActions {
   setCardDetail: (id: string | null) => void;
   setBiomeFilter: (biome: BiomeZone | 'all') => void;
   setFarmShape: (shape: 'square' | 'circle') => void;
+  setLeftPanelOpen: (open: boolean) => void;
+  setRightPanelOpen: (open: boolean) => void;
+  toggleLeftPanel: () => void;
+  toggleRightPanel: () => void;
   toggleLayer: (layer: keyof AtlasState['layerFilters']) => void;
 }
 
@@ -67,6 +71,8 @@ export const useAtlas = create<AtlasState & AtlasActions>((set, get) => ({
   quizOpen: false,
   cardDetailId: null,
   biomeFilter: 'all',
+  leftPanelOpen: true,
+  rightPanelOpen: true,
   layerFilters: {
     canopy: true,
     shrub: true,
@@ -151,6 +157,10 @@ export const useAtlas = create<AtlasState & AtlasActions>((set, get) => ({
   setCardDetail: (id) => set({ cardDetailId: id }),
   setBiomeFilter: (biome) => set({ biomeFilter: biome }),
   setFarmShape: (shape) => set({ farmShape: shape }),
+  setLeftPanelOpen: (open) => set({ leftPanelOpen: open }),
+  setRightPanelOpen: (open) => set({ rightPanelOpen: open }),
+  toggleLeftPanel: () => set(state => ({ leftPanelOpen: !state.leftPanelOpen })),
+  toggleRightPanel: () => set(state => ({ rightPanelOpen: !state.rightPanelOpen })),
 
   toggleLayer: (layer) =>
     set(state => ({

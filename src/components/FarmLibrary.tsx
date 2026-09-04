@@ -3,20 +3,35 @@ import { FARMS } from '@/data/farms/index';
 import type { BiomeZone } from '@/data/types';
 
 export function FarmLibrary() {
-  const { selectedFarmId, selectFarm, biomeFilter } = useAtlas();
+  const { selectedFarmId, selectFarm, biomeFilter, leftPanelOpen, toggleLeftPanel } = useAtlas();
 
   const filtered = biomeFilter === 'all'
     ? FARMS
     : FARMS.filter(f => f.biome === biomeFilter);
 
   return (
-    <aside className="farm-library" aria-label="Farm library">
-      <div className="library-header">
-        <h3>Farm Ecosystems</h3>
-        <span className="library-count">{filtered.length} of {FARMS.length}</span>
-      </div>
+    <aside
+      className={`farm-library ${!leftPanelOpen ? 'closed' : ''}`}
+      aria-label="Farm library"
+      aria-hidden={!leftPanelOpen}
+    >
+      <div className="farm-library-inner">
+        <div className="library-header">
+          <div className="library-header-title">
+            <h3>Farm Ecosystems</h3>
+            <span className="library-count">{filtered.length} of {FARMS.length}</span>
+          </div>
+          <button
+            className="panel-close-btn"
+            onClick={toggleLeftPanel}
+            title="Close Farm Library ( [ )"
+            aria-label="Close Farm Library"
+          >
+            ✕
+          </button>
+        </div>
 
-      <div className="library-list" role="listbox" aria-label="Farm selection">
+        <div className="library-list" role="listbox" aria-label="Farm selection">
         {filtered.map(farm => (
           <button
             key={farm.id}
@@ -70,6 +85,7 @@ export function FarmLibrary() {
             </div>
           </button>
         ))}
+        </div>
       </div>
     </aside>
   );

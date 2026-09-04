@@ -188,6 +188,8 @@ export interface AtlasState {
   quizOpen: boolean;
   cardDetailId: string | null;
   biomeFilter: BiomeZone | 'all';
+  leftPanelOpen: boolean;
+  rightPanelOpen: boolean;
   layerFilters: {
     canopy: boolean;
     shrub: boolean;

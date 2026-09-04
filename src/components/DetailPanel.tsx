@@ -7,17 +7,33 @@ import { EducationalCards } from './EducationalCards';
 
 export function DetailPanel() {
   const farm = useSelectedFarm();
-  const { timeOfDay, setTimeOfDay } = useAtlas();
+  const { timeOfDay, setTimeOfDay, rightPanelOpen, toggleRightPanel } = useAtlas();
 
   if (!farm) {
     return (
-      <div className="detail-panel detail-empty">
-        <div className="empty-state">
-          <div className="empty-icon">🌱</div>
-          <h3>Select a Farm</h3>
-          <p>Choose a farm ecosystem from the library to explore it in 3D.</p>
+      <aside
+        className={`detail-panel detail-empty ${!rightPanelOpen ? 'closed' : ''}`}
+        aria-label="Farm detail"
+        aria-hidden={!rightPanelOpen}
+      >
+        <div className="detail-panel-inner detail-empty-inner">
+          <div className="detail-header-bar-empty">
+            <button
+              className="panel-close-btn detail-close-btn"
+              onClick={toggleRightPanel}
+              title="Close Details ( ] )"
+              aria-label="Close Details"
+            >
+              ✕
+            </button>
+          </div>
+          <div className="empty-state">
+            <div className="empty-icon">🌱</div>
+            <h3>Select a Farm</h3>
+            <p>Choose a farm ecosystem from the library to explore it in 3D.</p>
+          </div>
         </div>
-      </div>
+      </aside>
     );
   }
 
@@ -25,26 +41,39 @@ export function DetailPanel() {
   const livestock = getLivestockByIds(farm.livestockIds);
 
   return (
-    <aside className="detail-panel" aria-label="Farm detail">
-      {/* Farm header */}
-      <div className="detail-header">
-        <div
-          className="detail-hero"
-          style={{
-            background: `linear-gradient(135deg, ${farm.accentColor}22, ${farm.accentColor2}22)`,
-            borderBottom: `3px solid ${farm.accentColor}`,
-          }}
-        >
-          <div className="detail-farm-icon">{farm.icon}</div>
-          <div className="detail-farm-info">
-            <h2 className="detail-farm-name">{farm.name}</h2>
-            <p className="detail-farm-sub">{farm.subtitle}</p>
-            <div className="detail-farm-meta">
-              <span className="tag tag-green">{farm.region}</span>
-              <span className="tag tag-amber">LER {farm.lerBaseline.toFixed(2)}</span>
+    <aside
+      className={`detail-panel ${!rightPanelOpen ? 'closed' : ''}`}
+      aria-label="Farm detail"
+      aria-hidden={!rightPanelOpen}
+    >
+      <div className="detail-panel-inner">
+        {/* Farm header */}
+        <div className="detail-header">
+          <div
+            className="detail-hero"
+            style={{
+              background: `linear-gradient(135deg, ${farm.accentColor}22, ${farm.accentColor2}22)`,
+              borderBottom: `3px solid ${farm.accentColor}`,
+            }}
+          >
+            <div className="detail-farm-icon">{farm.icon}</div>
+            <div className="detail-farm-info">
+              <h2 className="detail-farm-name">{farm.name}</h2>
+              <p className="detail-farm-sub">{farm.subtitle}</p>
+              <div className="detail-farm-meta">
+                <span className="tag tag-green">{farm.region}</span>
+                <span className="tag tag-amber">LER {farm.lerBaseline.toFixed(2)}</span>
+              </div>
             </div>
+            <button
+              className="panel-close-btn detail-close-btn"
+              onClick={toggleRightPanel}
+              title="Close Details ( ] )"
+              aria-label="Close Details"
+            >
+              ✕
+            </button>
           </div>
-        </div>
 
         {/* Time of day slider */}
         <div className="time-slider-row">
@@ -140,6 +169,7 @@ export function DetailPanel() {
         <section className="detail-section">
           <EducationalCards />
         </section>
+      </div>
       </div>
     </aside>
   );
