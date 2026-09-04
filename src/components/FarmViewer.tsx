@@ -173,7 +173,7 @@ export function FarmViewer() {
   }, [leftPanelOpen, rightPanelOpen]);
 
   return (
-    <div className="farm-viewer-wrap">
+    <div className={`farm-viewer-wrap ${leftPanelOpen && rightPanelOpen ? 'panels-open' : ''}`}>
       {/* Three.js Canvas */}
       <canvas
         ref={canvasRef}
@@ -251,18 +251,11 @@ export function FarmViewer() {
         </div>
       )}
 
-      {/* Floating Toolbar (top left) */}
-      <div className="viewer-overlay-top-left" style={{
-        position: 'absolute',
-        top: '16px',
-        left: '16px',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        zIndex: 20,
-        flexWrap: 'wrap',
-      }}>
-        {/* Active Farm / Sandbox Badge */}
+      {/* Floating Unified Top Toolbar */}
+      <div className="viewer-top-bar">
+        {/* Top-Left Cluster: Context, Scale & Infrastructure */}
+        <div className="viewer-top-left">
+          {/* Active Farm / Sandbox Badge */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
@@ -543,81 +536,85 @@ export function FarmViewer() {
             </div>
           )}
         </div>
+        </div>
 
-        {/* Plot Cadastral Shape Toggle (Square / Circle) */}
-        <button
-          onClick={() => setFarmShape(farmShape === 'square' ? 'circle' : 'square')}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '5px',
-            background: 'var(--glass)',
-            backdropFilter: 'blur(16px)',
-            WebkitBackdropFilter: 'blur(16px)',
-            border: '1px solid var(--border-strong)',
-            borderRadius: 'var(--r-full)',
-            padding: '5px 10px',
-            fontSize: '11px',
-            fontWeight: 600,
-            color: 'var(--ink-strong)',
-            cursor: 'pointer',
-            boxShadow: 'var(--shadow-card)',
-          }}
-          title={farmShape === 'square' ? 'Switch to Circular Diorama' : 'Switch to Square Cadastral Plot'}
-        >
-          <span>{farmShape === 'square' ? '⏹ Square Plot' : '⏺ Circular Diorama'}</span>
-        </button>
+        {/* Top-Right Cluster: Actions & Controls */}
+        <div className="viewer-top-right">
+          {/* Plot Cadastral Shape Toggle (Square / Circle) */}
+          <button
+            onClick={() => setFarmShape(farmShape === 'square' ? 'circle' : 'square')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
+              background: 'var(--glass)',
+              backdropFilter: 'blur(16px)',
+              WebkitBackdropFilter: 'blur(16px)',
+              border: '1px solid var(--border-strong)',
+              borderRadius: 'var(--r-full)',
+              padding: '5px 10px',
+              fontSize: '11px',
+              fontWeight: 600,
+              color: 'var(--ink-strong)',
+              cursor: 'pointer',
+              boxShadow: 'var(--shadow-card)',
+            }}
+            title={farmShape === 'square' ? 'Switch to Circular Diorama' : 'Switch to Square Cadastral Plot'}
+          >
+            <span>{farmShape === 'square' ? '⏹ Plot' : '⏺ Circle'}</span>
+          </button>
 
-        {/* Save Farm Configuration Button */}
-        <button
-          onClick={() => setSaveModalOpen(true)}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '5px',
-            background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.22) 0%, rgba(5, 150, 105, 0.18) 100%)',
-            backdropFilter: 'blur(16px)',
-            WebkitBackdropFilter: 'blur(16px)',
-            border: '1px solid var(--green-primary)',
-            borderRadius: 'var(--r-full)',
-            padding: '5px 12px',
-            fontSize: '11px',
-            fontWeight: 700,
-            color: 'var(--green-light)',
-            cursor: 'pointer',
-            boxShadow: '0 2px 8px var(--green-glow)',
-          }}
-          title="Save current farm configuration with custom name and notes"
-        >
-          <span>💾</span>
-          <span>Save Farm</span>
-        </button>
+          {/* Save Farm Configuration Button */}
+          <button
+            onClick={() => setSaveModalOpen(true)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
+              background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.22) 0%, rgba(5, 150, 105, 0.18) 100%)',
+              backdropFilter: 'blur(16px)',
+              WebkitBackdropFilter: 'blur(16px)',
+              border: '1px solid var(--green-primary)',
+              borderRadius: 'var(--r-full)',
+              padding: '5px 12px',
+              fontSize: '11px',
+              fontWeight: 700,
+              color: 'var(--green-light)',
+              cursor: 'pointer',
+              boxShadow: '0 2px 8px var(--green-glow)',
+            }}
+            title="Save current farm configuration to SQLite"
+          >
+            <span>💾</span>
+            <span>Save</span>
+          </button>
 
-        {/* Walkable First-Person View Toggle Button */}
-        <button
-          onClick={handleToggleWalkMode}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '5px',
-            background: isWalkMode ? 'var(--status-good)' : 'var(--glass)',
-            backdropFilter: 'blur(16px)',
-            WebkitBackdropFilter: 'blur(16px)',
-            border: '1px solid var(--border-strong)',
-            borderRadius: 'var(--r-full)',
-            padding: '5px 12px',
-            fontSize: '11px',
-            fontWeight: 700,
-            color: isWalkMode ? '#ffffff' : 'var(--ink-strong)',
-            cursor: 'pointer',
-            boxShadow: 'var(--shadow-card)',
-            transition: 'all 0.2s ease',
-          }}
-          title="Enter 1st Person Farmer Walk Mode"
-        >
-          <span>🚶</span>
-          <span>{isWalkMode ? 'Walking Farm' : 'Walk Farm (1st Person)'}</span>
-        </button>
+          {/* Walkable First-Person View Toggle Button */}
+          <button
+            onClick={handleToggleWalkMode}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
+              background: isWalkMode ? 'var(--status-good)' : 'var(--glass)',
+              backdropFilter: 'blur(16px)',
+              WebkitBackdropFilter: 'blur(16px)',
+              border: '1px solid var(--border-strong)',
+              borderRadius: 'var(--r-full)',
+              padding: '5px 12px',
+              fontSize: '11px',
+              fontWeight: 700,
+              color: isWalkMode ? '#ffffff' : 'var(--ink-strong)',
+              cursor: 'pointer',
+              boxShadow: 'var(--shadow-card)',
+              transition: 'all 0.2s ease',
+            }}
+            title="Enter 1st Person Farmer Walk Mode"
+          >
+            <span>🚶</span>
+            <span>{isWalkMode ? 'Exit' : 'Walk'}</span>
+          </button>
+        </div>
       </div>
 
       {/* View state selector (top center) */}

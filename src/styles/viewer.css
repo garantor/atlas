@@ -58,7 +58,7 @@
   color: var(--muted);
 }
 
-/* ─── Floating Controls ─── */
+/* ─── Floating Controls (Bottom Right) ─── */
 .viewer-controls {
   position: absolute;
   bottom: var(--space-4);
@@ -66,7 +66,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  z-index: 10;
+  z-index: 20;
 }
 
 .viewer-controls-row {
@@ -74,15 +74,38 @@
   gap: var(--space-2);
 }
 
-/* ─── View State Selector (Floating Top Island) ─── */
+/* ─── Unified Floating Top Navigation Bar ─── */
+.viewer-top-bar {
+  position: absolute;
+  top: var(--space-3);
+  left: var(--space-3);
+  right: var(--space-3);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  z-index: 25;
+  pointer-events: none;
+}
+
+.viewer-top-left,
+.viewer-top-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  pointer-events: auto;
+  flex-wrap: wrap;
+}
+
+/* ─── View State Selector (Floating Bottom Island Dock) ─── */
 .view-state-selector {
   position: absolute;
-  top: var(--space-4);
+  bottom: var(--space-4);
   left: 50%;
   transform: translateX(-50%);
-  z-index: 10;
+  z-index: 25;
   display: flex;
-  background: var(--glass);
+  background: var(--glass-raised);
   backdrop-filter: blur(24px) saturate(1.5);
   -webkit-backdrop-filter: blur(24px) saturate(1.5);
   border: 1px solid var(--border-strong);
@@ -198,15 +221,15 @@
   color: var(--ink-body);
 }
 
-/* ─── Layer Filter Chips (Floating Top Right) ─── */
+/* ─── Layer Filter Chips (Floating Right Edge, below top bar) ─── */
 .layer-filters {
   position: absolute;
-  top: var(--space-4);
-  right: var(--space-4);
-  z-index: 10;
+  top: 56px;
+  right: var(--space-3);
+  z-index: 15;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
   animation: slideRight var(--dur-slow) var(--ease-out) 150ms both;
 }
 
@@ -254,4 +277,65 @@
 .layer-chip:not(.on) .layer-chip-dot {
   opacity: 0.35;
   box-shadow: none;
+}
+
+/* ─── Adaptations When Side Panels Are Open ─── */
+.farm-viewer-wrap.panels-open .viewer-top-bar {
+  top: 10px;
+  left: 10px;
+  right: 10px;
+  gap: 6px;
+}
+
+.farm-viewer-wrap.panels-open .viewer-top-left,
+.farm-viewer-wrap.panels-open .viewer-top-right {
+  gap: 6px;
+}
+
+.farm-viewer-wrap.panels-open .view-state-selector {
+  bottom: 12px;
+  padding: 3px;
+}
+
+.farm-viewer-wrap.panels-open .view-state-btn {
+  padding: 6px 13px;
+  font-size: 11px;
+  gap: 4px;
+}
+
+.farm-viewer-wrap.panels-open .viewer-controls {
+  bottom: 12px;
+  right: 12px;
+}
+
+.farm-viewer-wrap.panels-open .viewer-controls-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+}
+
+.farm-viewer-wrap.panels-open .layer-filters {
+  top: 52px;
+  right: 10px;
+  gap: 4px;
+}
+
+.farm-viewer-wrap.panels-open .layer-chip {
+  padding: 4px 9px;
+  font-size: 10px;
+  gap: 6px;
+}
+
+@media (max-width: 960px) {
+  .view-state-selector {
+    bottom: 10px;
+    padding: 3px;
+  }
+  .view-state-btn {
+    padding: 5px 10px;
+    font-size: 11px;
+  }
+  .layer-filters {
+    top: 50px;
+  }
 }
