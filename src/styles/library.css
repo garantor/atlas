@@ -9,16 +9,43 @@
   border-right: 1px solid var(--border);
   overflow: hidden;
   box-shadow: var(--shadow-card);
-  transition: all var(--dur-slow) var(--ease-out);
+  transition: width var(--dur-mid) var(--ease-out),
+              opacity var(--dur-mid) var(--ease-out),
+              border-color var(--dur-mid) var(--ease-out);
+}
+
+.farm-library.closed {
+  width: 0;
+  min-width: 0;
+  border-right-color: transparent;
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.farm-library-inner {
+  width: var(--sidebar-w);
+  min-width: var(--sidebar-w);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .library-header {
-  padding: var(--space-4) var(--space-5);
+  padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: var(--space-2);
   flex-shrink: 0;
+}
+
+.library-header-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 
 .library-header h3 {

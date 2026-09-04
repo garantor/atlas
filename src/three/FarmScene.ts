@@ -41,6 +41,7 @@ export class FarmScene {
   private elapsedTime = 0;
   private currentFarmId: string | null = null;
   private currentViewState: ViewState = 'macro';
+  private resizeObserver: ResizeObserver | null = null;
 
   constructor(canvas: HTMLCanvasElement, callbacks: SceneCallbacks) {
     this.canvas = canvas;
@@ -103,6 +104,10 @@ export class FarmScene {
 
     this.resize();
     window.addEventListener('resize', () => this.resize());
+    if (typeof ResizeObserver !== 'undefined') {
+      this.resizeObserver = new ResizeObserver(() => this.resize());
+      this.resizeObserver.observe(canvas);
+    }
 
     this.startLoop();
   }
@@ -290,6 +295,8 @@ export class FarmScene {
   dispose() {
     if (this.animationId !== null) cancelAnimationFrame(this.animationId);
     window.removeEventListener('resize', () => this.resize());
+    this.resizeObserver?.disconnect();
+    this.resizeObserver = null;
     this.controls.dispose();
     this.farmBuilder.dispose();
     this.particleCycles.dispose();
