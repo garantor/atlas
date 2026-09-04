@@ -319,58 +319,72 @@ export function SaveFarmModal() {
           <div
             style={{
               display: 'flex',
-              justifyContent: 'flex-end',
+              alignItems: 'center',
+              justifyContent: 'space-between',
               gap: '12px',
               marginTop: '8px',
             }}
           >
-            <button
-              type="button"
-              onClick={() => setSaveModalOpen(false)}
-              style={{
-                padding: '10px 20px',
-                borderRadius: '12px',
-                background: 'var(--surface-sunk)',
-                border: '1px solid var(--border)',
-                color: 'var(--ink-body)',
-                fontSize: '13px',
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={savedSuccess}
-              style={{
-                padding: '10px 24px',
-                borderRadius: '12px',
-                background: savedSuccess
-                  ? '#10b981'
-                  : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                border: 'none',
-                color: '#ffffff',
-                fontSize: '13px',
-                fontWeight: 700,
-                cursor: 'pointer',
-                boxShadow: '0 4px 14px var(--green-glow)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                transition: 'all 0.2s ease',
-              }}
-            >
-              {savedSuccess ? (
-                <>
-                  <span>✓</span> Saved!
-                </>
-              ) : (
-                <>
-                  <span>💾</span> Save Farm
-                </>
-              )}
-            </button>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '11px',
+              color: 'var(--green-light)',
+            }}>
+              <span>🗄️</span>
+              <span>Saving to SQLite: <code style={{ fontFamily: 'monospace', color: 'var(--muted)' }}>data/atlas.sqlite</code></span>
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                type="button"
+                onClick={() => setSaveModalOpen(false)}
+                style={{
+                  padding: '10px 20px',
+                  borderRadius: '12px',
+                  background: 'var(--surface-sunk)',
+                  border: '1px solid var(--border)',
+                  color: 'var(--ink-body)',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={savedSuccess}
+                style={{
+                  padding: '10px 24px',
+                  borderRadius: '12px',
+                  background: savedSuccess
+                    ? '#10b981'
+                    : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                  border: 'none',
+                  color: '#ffffff',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 14px var(--green-glow)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                {savedSuccess ? (
+                  <>
+                    <span>✓</span> Saved!
+                  </>
+                ) : (
+                  <>
+                    <span>💾</span> Save Farm
+                  </>
+                )}
+              </button>
+            </div>
           </div>
 
         </form>

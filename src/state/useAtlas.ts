@@ -7,6 +7,8 @@ import type { AtlasState, IntercroppingResult, ViewState, Season, BiomeZone, Sav
 import { simulateIntercropping } from '../data/intercroppingRules';
 import { FARMS } from '../data/farms/index';
 
+import { sqliteFarmService } from '@/services/sqliteFarmService';
+
 const DEFAULT_SIMULATION: IntercroppingResult = {
   ler: 0,
   nitrogenDelta: 0,
@@ -17,28 +19,6 @@ const DEFAULT_SIMULATION: IntercroppingResult = {
   compatibilityWarnings: [],
   synergies: [],
   farmerAdvisories: [],
-};
-
-const SAVED_FARMS_KEY = 'atlas_saved_farms_v1';
-
-const getInitialSavedFarms = (): SavedFarmConfig[] => {
-  if (typeof window === 'undefined') return [];
-  try {
-    const raw = localStorage.getItem(SAVED_FARMS_KEY);
-    if (!raw) return [];
-    return JSON.parse(raw) as SavedFarmConfig[];
-  } catch {
-    return [];
-  }
-};
-
-const persistSavedFarms = (configs: SavedFarmConfig[]) => {
-  if (typeof window === 'undefined') return;
-  try {
-    localStorage.setItem(SAVED_FARMS_KEY, JSON.stringify(configs));
-  } catch (err) {
-    console.warn('Failed to persist saved farms:', err);
-  }
 };
 
 interface AtlasActions {
@@ -67,6 +47,7 @@ interface AtlasActions {
   saveFarmConfig: (name: string, description?: string) => SavedFarmConfig;
   loadSavedFarmConfig: (configId: string) => void;
   deleteSavedFarmConfig: (configId: string) => void;
+  loadSavedFarmsFromDb: () => Promise<void>;
   setSaveModalOpen: (open: boolean) => void;
   setLeftPanelOpen: (open: boolean) => void;
   setRightPanelOpen: (open: boolean) => void;
@@ -97,7 +78,7 @@ export const useAtlas = create<AtlasState & AtlasActions>((set, get) => ({
     perimeterFence: true,
     dryingPatio: true,
   },
-  savedFarmConfigs: getInitialSavedFarms(),
+  savedFarmConfigs: [],
   loadedSavedConfigId: null,
   saveModalOpen: false,
   viewState: 'macro',
@@ -251,9 +232,14 @@ export const useAtlas = create<AtlasState & AtlasActions>((set, get) => ({
       biome,
     };
 
-    const updated = [newConfig, ...get().savedFarmConfigs];
-    persistSavedFarms(updated);
+    const updated = [newConfig, ...get().savedFarmConfigs.filter(c => c.id !== newConfig.id)];
     set({ savedFarmConfigs: updated, saveModalOpen: false, loadedSavedConfigId: newConfig.id });
+
+    // Persist to SQLite on disk asynchronously
+    sqliteFarmService.save(newConfig).catch(err => {
+      console.error('[SQLite] Failed to persist saved farm:', err);
+    });
+
     return newConfig;
   },
 
@@ -277,11 +263,26 @@ export const useAtlas = create<AtlasState & AtlasActions>((set, get) => ({
 
   deleteSavedFarmConfig: (configId) => {
     const updated = get().savedFarmConfigs.filter(c => c.id !== configId);
-    persistSavedFarms(updated);
     set(state => ({
       savedFarmConfigs: updated,
       loadedSavedConfigId: state.loadedSavedConfigId === configId ? null : state.loadedSavedConfigId,
     }));
+
+    // Delete from SQLite database on disk
+    sqliteFarmService.delete(configId).catch(err => {
+      console.error('[SQLite] Failed to delete farm:', err);
+    });
+  },
+
+  loadSavedFarmsFromDb: async () => {
+    try {
+      const farms = await sqliteFarmService.getAll();
+      if (farms && farms.length > 0) {
+        set({ savedFarmConfigs: farms });
+      }
+    } catch (err) {
+      console.error('[SQLite] Failed to load farms from database:', err);
+    }
   },
 
   setSaveModalOpen: (open) => set({ saveModalOpen: open }),
@@ -311,3 +312,9 @@ export const useLoadedSavedFarm = () => {
   if (!loadedId) return null;
   return configs.find(c => c.id === loadedId) ?? null;
 };
+
+// Asynchronously load saved farms from SQLite database on app start
+if (typeof window !== 'undefined') {
+  useAtlas.getState().loadSavedFarmsFromDb();
+}
+

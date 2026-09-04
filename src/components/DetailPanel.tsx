@@ -5,7 +5,6 @@ import { calculateSpeciesPopulation } from '@/data/agronomicDensity';
 import type { FarmInfrastructure } from '@/data/types';
 import { IntercroppingSandbox } from './IntercroppingSandbox';
 import { SimulationPanel } from './SimulationPanel';
-import { EducationalCards } from './EducationalCards';
 
 export function DetailPanel() {
   const farm = useSelectedFarm();
@@ -473,13 +472,6 @@ export function DetailPanel() {
           <section className="detail-section">
             <IntercroppingSandbox />
           </section>
-
-          {/* Educational cards */}
-          {farm?.educationalCards && farm.educationalCards.length > 0 && (
-            <section className="detail-section">
-              <EducationalCards />
-            </section>
-          )}
         </div>
       </div>
     </aside>

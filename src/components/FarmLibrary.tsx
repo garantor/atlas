@@ -129,6 +129,27 @@ export function FarmLibrary() {
         {/* Tab 2: User Saved Farm Configurations */}
         {activeTab === 'saved' && (
           <div className="library-list" role="listbox" aria-label="Saved farm configurations">
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '6px 10px',
+              borderRadius: '8px',
+              background: 'rgba(16, 185, 129, 0.08)',
+              border: '1px solid rgba(16, 185, 129, 0.2)',
+              fontSize: '11px',
+              color: 'var(--green-light)',
+              marginBottom: '8px',
+            }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span>🗄️</span>
+                <strong>SQLite Database</strong>
+              </span>
+              <span style={{ fontSize: '10px', color: 'var(--muted)', fontFamily: 'monospace' }}>
+                data/atlas.sqlite
+              </span>
+            </div>
+
             {savedFarmConfigs.length === 0 ? (
               <div style={{
                 textAlign: 'center',
