@@ -11,16 +11,42 @@ const BIOMES = [
 ];
 
 export function Header() {
-  const { theme, toggleTheme, setSearchOpen, season, setSeason, biomeFilter, setBiomeFilter } = useAtlas();
+  const {
+    theme, toggleTheme, setSearchOpen, season, setSeason,
+    biomeFilter, setBiomeFilter,
+    leftPanelOpen, toggleLeftPanel,
+    rightPanelOpen, toggleRightPanel,
+  } = useAtlas();
 
   return (
     <header className="atlas-header">
-      {/* Brand */}
-      <div className="header-brand">
-        <span className="header-brand-icon">🌿</span>
-        <div className="header-brand-text">
-          <span className="header-brand-title">Farm Atlas</span>
-          <span className="header-brand-sub">Tropical Agro-Ecosystems</span>
+      {/* Brand & Left Sidebar Toggle */}
+      <div className="header-brand-group">
+        <button
+          id="toggle-left-panel"
+          className={`btn-icon panel-toggle-btn ${leftPanelOpen ? 'active' : ''}`}
+          onClick={toggleLeftPanel}
+          title={leftPanelOpen ? 'Close Farm Library ( [ )' : 'Open Farm Library ( [ )'}
+          aria-label={leftPanelOpen ? 'Close Farm Library' : 'Open Farm Library'}
+          aria-pressed={leftPanelOpen}
+        >
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect width="18" height="18" x="3" y="3" rx="3" />
+            <path d="M9 3v18" />
+            {leftPanelOpen ? (
+              <path d="m14 9-3 3 3 3" />
+            ) : (
+              <path d="m11 9 3 3-3 3" />
+            )}
+          </svg>
+        </button>
+
+        <div className="header-brand">
+          <span className="header-brand-icon">🌿</span>
+          <div className="header-brand-text">
+            <span className="header-brand-title">Farm Atlas</span>
+            <span className="header-brand-sub">Tropical Agro-Ecosystems</span>
+          </div>
         </div>
       </div>
 
@@ -72,6 +98,26 @@ export function Header() {
           aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
         >
           {theme === 'dark' ? '☀️' : '🌙'}
+        </button>
+
+        {/* Right Panel Toggle */}
+        <button
+          id="toggle-right-panel"
+          className={`btn-icon panel-toggle-btn ${rightPanelOpen ? 'active' : ''}`}
+          onClick={toggleRightPanel}
+          title={rightPanelOpen ? 'Close Details & Simulation ( ] )' : 'Open Details & Simulation ( ] )'}
+          aria-label={rightPanelOpen ? 'Close Details Panel' : 'Open Details Panel'}
+          aria-pressed={rightPanelOpen}
+        >
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect width="18" height="18" x="3" y="3" rx="3" />
+            <path d="M15 3v18" />
+            {rightPanelOpen ? (
+              <path d="m10 9 3 3-3 3" />
+            ) : (
+              <path d="m13 9-3 3 3 3" />
+            )}
+          </svg>
         </button>
       </div>
     </header>
