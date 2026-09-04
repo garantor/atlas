@@ -45,7 +45,7 @@ export function FarmViewer() {
     activeDisplayMode, sandboxCropIds, sandboxLivestockIds, farmShape,
     farmAcreage, infrastructure, leftPanelOpen, rightPanelOpen,
     setDisplayMode, setActiveHotspot, toggleLayer, setFarmShape,
-    setFarmAcreage, toggleInfrastructure
+    setFarmAcreage, toggleInfrastructure, setSaveModalOpen
   } = useAtlas();
 
   const [loading, setLoading] = useState(true);
@@ -566,6 +566,31 @@ export function FarmViewer() {
           title={farmShape === 'square' ? 'Switch to Circular Diorama' : 'Switch to Square Cadastral Plot'}
         >
           <span>{farmShape === 'square' ? '⏹ Square Plot' : '⏺ Circular Diorama'}</span>
+        </button>
+
+        {/* Save Farm Configuration Button */}
+        <button
+          onClick={() => setSaveModalOpen(true)}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '5px',
+            background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.22) 0%, rgba(5, 150, 105, 0.18) 100%)',
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            border: '1px solid var(--green-primary)',
+            borderRadius: 'var(--r-full)',
+            padding: '5px 12px',
+            fontSize: '11px',
+            fontWeight: 700,
+            color: 'var(--green-light)',
+            cursor: 'pointer',
+            boxShadow: '0 2px 8px var(--green-glow)',
+          }}
+          title="Save current farm configuration with custom name and notes"
+        >
+          <span>💾</span>
+          <span>Save Farm</span>
         </button>
 
         {/* Walkable First-Person View Toggle Button */}

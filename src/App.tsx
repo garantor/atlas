@@ -7,6 +7,7 @@ import { FarmViewer } from './components/FarmViewer';
 import { DetailPanel } from './components/DetailPanel';
 import { SearchModal } from './components/SearchModal';
 import { CardDetailModal, LessonModal, QuizModal } from './components/Modals';
+import { SaveFarmModal } from './components/SaveFarmModal';
 import './styles/global.css';
 import './styles/viewer.css';
 import './styles/simulation.css';
@@ -96,6 +97,7 @@ function App() {
         <CardDetailModal />
         <LessonModal />
         <QuizModal />
+        <SaveFarmModal />
       </div>
     </ErrorBoundary>
   );

@@ -3,7 +3,7 @@
  */
 
 import { create } from 'zustand';
-import type { AtlasState, IntercroppingResult, ViewState, Season, BiomeZone } from '../data/types';
+import type { AtlasState, IntercroppingResult, ViewState, Season, BiomeZone, SavedFarmConfig } from '../data/types';
 import { simulateIntercropping } from '../data/intercroppingRules';
 import { FARMS } from '../data/farms/index';
 
@@ -17,6 +17,28 @@ const DEFAULT_SIMULATION: IntercroppingResult = {
   compatibilityWarnings: [],
   synergies: [],
   farmerAdvisories: [],
+};
+
+const SAVED_FARMS_KEY = 'atlas_saved_farms_v1';
+
+const getInitialSavedFarms = (): SavedFarmConfig[] => {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(SAVED_FARMS_KEY);
+    if (!raw) return [];
+    return JSON.parse(raw) as SavedFarmConfig[];
+  } catch {
+    return [];
+  }
+};
+
+const persistSavedFarms = (configs: SavedFarmConfig[]) => {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(SAVED_FARMS_KEY, JSON.stringify(configs));
+  } catch (err) {
+    console.warn('Failed to persist saved farms:', err);
+  }
 };
 
 interface AtlasActions {
@@ -42,6 +64,10 @@ interface AtlasActions {
   setFarmAcreage: (acres: number) => void;
   toggleInfrastructure: (key: keyof import('../data/types').FarmInfrastructure) => void;
   setInfrastructure: (infra: Partial<import('../data/types').FarmInfrastructure>) => void;
+  saveFarmConfig: (name: string, description?: string) => SavedFarmConfig;
+  loadSavedFarmConfig: (configId: string) => void;
+  deleteSavedFarmConfig: (configId: string) => void;
+  setSaveModalOpen: (open: boolean) => void;
   setLeftPanelOpen: (open: boolean) => void;
   setRightPanelOpen: (open: boolean) => void;
   toggleLeftPanel: () => void;
@@ -71,6 +97,9 @@ export const useAtlas = create<AtlasState & AtlasActions>((set, get) => ({
     perimeterFence: true,
     dryingPatio: true,
   },
+  savedFarmConfigs: getInitialSavedFarms(),
+  loadedSavedConfigId: null,
+  saveModalOpen: false,
   viewState: 'macro',
   activeHotspotId: null,
   season: 'wet',
@@ -96,7 +125,7 @@ export const useAtlas = create<AtlasState & AtlasActions>((set, get) => ({
   },
 
   // ─── Actions ───────────────────────────────────────────────────────────────
-  selectFarm: (id) => set({ selectedFarmId: id, activeDisplayMode: 'farm', activeHotspotId: null }),
+  selectFarm: (id) => set({ selectedFarmId: id, activeDisplayMode: 'farm', activeHotspotId: null, loadedSavedConfigId: null }),
 
   setDisplayMode: (mode) => set({ activeDisplayMode: mode }),
 
@@ -185,6 +214,77 @@ export const useAtlas = create<AtlasState & AtlasActions>((set, get) => ({
         ...infra,
       },
     })),
+
+  saveFarmConfig: (name, description) => {
+    const {
+      selectedFarmId, activeDisplayMode, farmShape, farmAcreage, infrastructure,
+      sandboxCropIds, sandboxLivestockIds
+    } = get();
+
+    let cropIds: string[] = [];
+    let livestockIds: string[] = [];
+    let biome: BiomeZone | undefined = undefined;
+
+    if (activeDisplayMode === 'sandbox') {
+      cropIds = [...sandboxCropIds];
+      livestockIds = [...sandboxLivestockIds];
+    } else {
+      const farm = FARMS.find(f => f.id === selectedFarmId);
+      if (farm) {
+        cropIds = [...farm.cropIds];
+        livestockIds = [...farm.livestockIds];
+        biome = farm.biome;
+      }
+    }
+
+    const newConfig: SavedFarmConfig = {
+      id: `saved-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      name: name.trim() || 'Custom Farm Configuration',
+      description: description?.trim(),
+      createdAt: Date.now(),
+      baseFarmId: selectedFarmId,
+      cropIds,
+      livestockIds,
+      farmAcreage,
+      infrastructure: { ...infrastructure },
+      farmShape,
+      biome,
+    };
+
+    const updated = [newConfig, ...get().savedFarmConfigs];
+    persistSavedFarms(updated);
+    set({ savedFarmConfigs: updated, saveModalOpen: false, loadedSavedConfigId: newConfig.id });
+    return newConfig;
+  },
+
+  loadSavedFarmConfig: (configId) => {
+    const config = get().savedFarmConfigs.find(c => c.id === configId);
+    if (!config) return;
+
+    const sim = simulateIntercropping(config.cropIds, config.livestockIds);
+    set({
+      selectedFarmId: config.baseFarmId || null,
+      loadedSavedConfigId: config.id,
+      farmAcreage: config.farmAcreage,
+      infrastructure: { ...config.infrastructure },
+      farmShape: config.farmShape,
+      sandboxCropIds: config.cropIds,
+      sandboxLivestockIds: config.livestockIds,
+      simulationResult: sim,
+      activeDisplayMode: 'sandbox', // Use sandbox mode to render exact saved species
+    });
+  },
+
+  deleteSavedFarmConfig: (configId) => {
+    const updated = get().savedFarmConfigs.filter(c => c.id !== configId);
+    persistSavedFarms(updated);
+    set(state => ({
+      savedFarmConfigs: updated,
+      loadedSavedConfigId: state.loadedSavedConfigId === configId ? null : state.loadedSavedConfigId,
+    }));
+  },
+
+  setSaveModalOpen: (open) => set({ saveModalOpen: open }),
   setLeftPanelOpen: (open) => set({ leftPanelOpen: open }),
   setRightPanelOpen: (open) => set({ rightPanelOpen: open }),
   toggleLeftPanel: () => set(state => ({ leftPanelOpen: !state.leftPanelOpen })),
@@ -203,4 +303,11 @@ export const useAtlas = create<AtlasState & AtlasActions>((set, get) => ({
 export const useSelectedFarm = () => {
   const farmId = useAtlas(s => s.selectedFarmId);
   return FARMS.find(f => f.id === farmId) ?? null;
+};
+
+export const useLoadedSavedFarm = () => {
+  const loadedId = useAtlas(s => s.loadedSavedConfigId);
+  const configs = useAtlas(s => s.savedFarmConfigs);
+  if (!loadedId) return null;
+  return configs.find(c => c.id === loadedId) ?? null;
 };

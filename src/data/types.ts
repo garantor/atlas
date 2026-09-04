@@ -181,6 +181,21 @@ export interface FarmInfrastructure {
   dryingPatio: boolean;
 }
 
+export interface SavedFarmConfig {
+  id: string;
+  name: string;
+  description?: string;
+  createdAt: number;
+  updatedAt?: number;
+  baseFarmId?: string | null;
+  cropIds: string[];
+  livestockIds: string[];
+  farmAcreage: number;
+  infrastructure: FarmInfrastructure;
+  farmShape: 'square' | 'circle';
+  biome?: BiomeZone;
+}
+
 export interface AtlasState {
   selectedFarmId: string | null;
   viewState: ViewState;
@@ -192,6 +207,9 @@ export interface AtlasState {
   farmShape: 'square' | 'circle';
   farmAcreage: number;                // in acres (e.g. 2.47 for 1 Ha, 30, 100, 1000, 1000000)
   infrastructure: FarmInfrastructure;
+  savedFarmConfigs: SavedFarmConfig[];
+  loadedSavedConfigId: string | null;
+  saveModalOpen: boolean;
   sandboxCropIds: string[];
   sandboxLivestockIds: string[];
   simulationResult: IntercroppingResult;

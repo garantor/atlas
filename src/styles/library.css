@@ -191,3 +191,62 @@
   color: #ffffff;
   box-shadow: 0 2px 8px var(--green-glow);
 }
+
+/* ─── Library Top Navigation Tabs (Presets vs My Saved) ─── */
+.library-nav-tabs {
+  display: flex;
+  background: var(--surface-sunk);
+  padding: 4px;
+  border-radius: 12px;
+  margin: var(--space-3) var(--space-3) 0 var(--space-3);
+  gap: 4px;
+  border: 1px solid var(--border);
+}
+
+.library-nav-tab {
+  flex: 1;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+  color: var(--muted);
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  transition: all var(--dur-fast) var(--ease-out);
+}
+
+.library-nav-tab:hover {
+  color: var(--ink-strong);
+  background: var(--surface-hover);
+}
+
+.library-nav-tab.active {
+  background: var(--surface-raised);
+  color: var(--green-light);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-strong);
+}
+
+.library-save-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: var(--r-full);
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--green-wash);
+  color: var(--green-light);
+  border: 1px solid var(--green-glow);
+  cursor: pointer;
+  transition: all var(--dur-fast) var(--ease-out);
+}
+
+.library-save-btn:hover {
+  background: var(--green-primary);
+  color: #ffffff;
+  box-shadow: 0 2px 8px var(--green-glow);
+}
+
