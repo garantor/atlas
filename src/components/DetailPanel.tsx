@@ -1,6 +1,7 @@
 import { useAtlas, useSelectedFarm, useLoadedSavedFarm } from '@/state/useAtlas';
 import { getCropsByIds } from '@/data/cropsDatabase';
 import { getLivestockByIds } from '@/data/livestockDatabase';
+import { calculateSpeciesPopulation } from '@/data/agronomicDensity';
 import type { FarmInfrastructure } from '@/data/types';
 import { IntercroppingSandbox } from './IntercroppingSandbox';
 import { SimulationPanel } from './SimulationPanel';
@@ -288,47 +289,182 @@ export function DetailPanel() {
             </ul>
           </section>
 
-          {/* Crops */}
+          {/* Crops with Ideal Planting Population */}
           <section className="detail-section">
-            <h3 className="section-title">🌱 Crops ({crops.length})</h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+              <h3 className="section-title" style={{ margin: 0 }}>🌱 Botanical Crops ({crops.length})</h3>
+              <span style={{ fontSize: '11px', color: 'var(--muted)' }}>
+                Target Count ({activeAcreage >= 1000 ? `${(activeAcreage / 1000).toLocaleString()}k` : activeAcreage} ac)
+              </span>
+            </div>
             <div className="species-grid">
-              {crops.map(crop => (
-                <div key={crop.id} className="species-chip" title={crop.scientificName}>
-                  <span className="species-icon">{crop.icon}</span>
-                  <div className="species-info">
-                    <span className="species-name">{crop.name}</span>
-                    <span className="species-sci">{crop.localName}</span>
+              {crops.map(crop => {
+                const pop = calculateSpeciesPopulation(crop.id, activeAcreage, true);
+                return (
+                  <div key={crop.id} className="species-chip" title={`${crop.scientificName} · Spacing: ${pop.spacing}`}>
+                    <span className="species-icon">{crop.icon}</span>
+                    <div className="species-info">
+                      <span className="species-name">{crop.name}</span>
+                      <span className="species-sci">{crop.localName}</span>
+                      <span style={{
+                        fontSize: '10px',
+                        fontWeight: 700,
+                        color: 'var(--green-light)',
+                        background: 'var(--green-wash)',
+                        padding: '1px 6px',
+                        borderRadius: '4px',
+                        marginTop: '2px',
+                        display: 'inline-block',
+                      }}>
+                        {pop.countFormatted} {pop.unit}
+                      </span>
+                    </div>
+                    {crop.nitrogenFixation > 0 && (
+                      <span className="n2-badge" title={`Fixes ${crop.nitrogenFixation} kg N/ha`}>
+                        N₂
+                      </span>
+                    )}
                   </div>
-                  {crop.nitrogenFixation > 0 && (
-                    <span className="n2-badge" title={`Fixes ${crop.nitrogenFixation} kg N/ha`}>
-                      N₂
-                    </span>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           </section>
 
-          {/* Livestock */}
+          {/* Livestock with Carrying Capacity Headcount */}
           {livestock.length > 0 && (
             <section className="detail-section">
-              <h3 className="section-title">🐐 Fauna ({livestock.length})</h3>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <h3 className="section-title" style={{ margin: 0 }}>🐐 Fauna & Livestock ({livestock.length})</h3>
+                <span style={{ fontSize: '11px', color: 'var(--muted)' }}>
+                  Carrying Capacity ({activeAcreage >= 1000 ? `${(activeAcreage / 1000).toLocaleString()}k` : activeAcreage} ac)
+                </span>
+              </div>
               <div className="species-grid">
-                {livestock.map(animal => (
-                  <div key={animal.id} className="species-chip" title={animal.scientificName}>
-                    <span className="species-icon">{animal.icon}</span>
-                    <div className="species-info">
-                      <span className="species-name">{animal.name}</span>
-                      <span className="species-sci">{animal.localName}</span>
+                {livestock.map(animal => {
+                  const pop = calculateSpeciesPopulation(animal.id, activeAcreage, false);
+                  return (
+                    <div key={animal.id} className="species-chip" title={`${animal.scientificName} · Range: ${pop.spacing}`}>
+                      <span className="species-icon">{animal.icon}</span>
+                      <div className="species-info">
+                        <span className="species-name">{animal.name}</span>
+                        <span className="species-sci">{animal.localName}</span>
+                        <span style={{
+                          fontSize: '10px',
+                          fontWeight: 700,
+                          color: 'var(--harvest-light)',
+                          background: 'rgba(245, 158, 11, 0.1)',
+                          padding: '1px 6px',
+                          borderRadius: '4px',
+                          marginTop: '2px',
+                          display: 'inline-block',
+                        }}>
+                          {pop.countFormatted} {pop.unit}
+                        </span>
+                      </div>
+                      {animal.pollinationScore > 0.8 && (
+                        <span className="pollinator-badge" title="Key pollinator">🐝</span>
+                      )}
                     </div>
-                    {animal.pollinationScore > 0.8 && (
-                      <span className="pollinator-badge" title="Key pollinator">🐝</span>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </section>
           )}
+
+          {/* ─── Ideal Agronomic Density & Population Matrix ─── */}
+          <section className="detail-section">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+              <h3 className="section-title" style={{ margin: 0 }}>
+                🌾 Recommended Biological Inventory
+              </h3>
+              <span style={{
+                fontSize: '10px',
+                fontWeight: 700,
+                color: 'var(--green-light)',
+                background: 'var(--green-wash)',
+                padding: '2px 8px',
+                borderRadius: 'var(--r-full)',
+                border: '1px solid var(--green-glow)',
+              }}>
+                {activeAcreage >= 1000 ? `${(activeAcreage / 1000).toLocaleString()}k ac` : `${activeAcreage} ac`} · {(activeAcreage / 2.471).toFixed(1)} ha
+              </span>
+            </div>
+            <p style={{ fontSize: '11px', color: 'var(--muted)', margin: '0 0 10px', lineHeight: 1.5 }}>
+              Scientifically calibrated planting densities and livestock stocking capacities (FAO / ICRAF agroforestry standards).
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {[...crops, ...livestock].map(item => {
+                const isFauna = 'category' in item && ['livestock', 'poultry', 'aquatic', 'micro-fauna', 'pollinator'].includes(item.category);
+                const pop = calculateSpeciesPopulation(item.id, activeAcreage, !isFauna);
+                return (
+                  <div
+                    key={item.id}
+                    style={{
+                      padding: '10px 12px',
+                      borderRadius: '10px',
+                      background: 'var(--surface-raised)',
+                      border: '1px solid var(--border)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '6px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '18px' }}>{item.icon}</span>
+                        <div>
+                          <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--ink-strong)' }}>
+                            {item.name}
+                          </div>
+                          <div style={{ fontSize: '10px', color: 'var(--muted)', fontStyle: 'italic' }}>
+                            {item.scientificName}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{
+                          fontSize: '13px',
+                          fontWeight: 800,
+                          color: isFauna ? 'var(--harvest-light)' : 'var(--green-light)',
+                          letterSpacing: '-0.01em',
+                        }}>
+                          {pop.countFormatted}
+                        </div>
+                        <div style={{ fontSize: '10px', color: 'var(--muted)', fontWeight: 600 }}>
+                          {pop.unit}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(2, 1fr)',
+                      gap: '6px',
+                      background: 'var(--surface-sunk)',
+                      padding: '6px 8px',
+                      borderRadius: '6px',
+                      fontSize: '10px',
+                    }}>
+                      <div>
+                        <span style={{ color: 'var(--muted)' }}>Field Spacing: </span>
+                        <strong style={{ color: 'var(--ink-body)' }}>{pop.spacing}</strong>
+                      </div>
+                      <div>
+                        <span style={{ color: 'var(--muted)' }}>Est. Yield: </span>
+                        <strong style={{ color: 'var(--ink-body)' }}>{pop.expectedYield}</strong>
+                      </div>
+                    </div>
+
+                    <div style={{ fontSize: '10px', color: 'var(--muted)', lineHeight: 1.4, padding: '0 2px' }}>
+                      💡 {pop.managementTip}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
 
           {/* Simulation panel (LER gauges, metrics) */}
           <SimulationPanel />

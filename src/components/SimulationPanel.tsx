@@ -1,5 +1,6 @@
 import { useAtlas, useSelectedFarm } from '@/state/useAtlas';
 import { lerLabel, simulateIntercropping } from '@/data/intercroppingRules';
+import { calculateSpeciesPopulation } from '@/data/agronomicDensity';
 import type { FarmerAdvisory } from '@/data/types';
 
 export function SimulationPanel() {
@@ -30,6 +31,22 @@ export function SimulationPanel() {
   const totalRevenueNaira = hectares * revenuePerHa;
   const carbonOffsetTonnes = hectares * 4.8;
   const jobsSupported = Math.max(1, Math.round(hectares * 1.5));
+
+  // Calculate biological inventory headcount for configured acreage
+  const activeCropList = activeResult === simulationResult && sandboxCropIds.length > 0
+    ? sandboxCropIds
+    : (farm?.cropIds || []);
+
+  const activeFaunaList = activeResult === simulationResult && sandboxLivestockIds.length > 0
+    ? sandboxLivestockIds
+    : (farm?.livestockIds || []);
+
+  const totalTreeHeadcount = activeCropList
+    .filter(id => ['oil-palm', 'cocoa', 'cashew', 'mango', 'kola-nut', 'plantain', 'pawpaw'].includes(id))
+    .reduce((sum, id) => sum + calculateSpeciesPopulation(id, farmAcreage, true).count, 0);
+
+  const totalFaunaHeadcount = activeFaunaList
+    .reduce((sum, id) => sum + calculateSpeciesPopulation(id, farmAcreage, false).count, 0);
 
   const formatRevenue = (amount: number): string => {
     if (amount >= 1e9) return `₦${(amount / 1e9).toFixed(2)}B`;
@@ -182,6 +199,26 @@ export function SimulationPanel() {
               {formatRevenue(totalRevenueNaira)}
             </div>
           </div>
+          {totalTreeHeadcount > 0 && (
+            <div style={{ background: 'var(--surface-raised)', padding: '8px 10px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+              <div style={{ fontSize: '10px', color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <span>🌴</span> Tree Canopy Population
+              </div>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--green-light)', marginTop: '2px' }}>
+                {totalTreeHeadcount >= 1e6 ? `${(totalTreeHeadcount / 1e6).toFixed(2)}M` : totalTreeHeadcount.toLocaleString()} Trees/Palms
+              </div>
+            </div>
+          )}
+          {totalFaunaHeadcount > 0 && (
+            <div style={{ background: 'var(--surface-raised)', padding: '8px 10px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+              <div style={{ fontSize: '10px', color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <span>🐐</span> Livestock & Poultry
+              </div>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--harvest-light)', marginTop: '2px' }}>
+                {totalFaunaHeadcount >= 1e6 ? `${(totalFaunaHeadcount / 1e6).toFixed(2)}M` : totalFaunaHeadcount.toLocaleString()} Animals/Birds
+              </div>
+            </div>
+          )}
           <div style={{ background: 'var(--surface-raised)', padding: '8px 10px', borderRadius: '8px', border: '1px solid var(--border)' }}>
             <div style={{ fontSize: '10px', color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
               <span>🌱</span> Carbon Storage
